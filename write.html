@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>YouBlogs — Write</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+
+    /* ── Override top-nav wordmark for this page ── */
+    :root { --nav-h: 56px; }
+
+    /* ── Full-screen editor layout ── */
+    .write-page {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* ── Write top bar ── */
+    .write-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--nav-h);
+      background: rgba(10,10,11,0.92);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 var(--sp-3);
+      z-index: 100;
+      gap: var(--sp-2);
+    }
+
+    .write-nav__back {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: var(--r-full);
+      color: var(--text-sub);
+      transition: background var(--t-fast), color var(--t-fast);
+      flex-shrink: 0;
+    }
+    .write-nav__back:hover { background: var(--ink-3); color: var(--text); }
+    .write-nav__back svg { width: 20px; height: 20px; }
+
+    .write-nav__title {
+      font-family: var(--font-display);
+      font-size: var(--text-base);
+      font-weight: 600;
+      color: var(--text);
+      flex: 1;
+    }
+
+    .write-nav__status {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .write-nav__status svg { width: 12px; height: 12px; }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--ink-5);
+      display: inline-block;
+      transition: background var(--t-base);
+    }
+
+    .status-dot--saved   { background: var(--green); }
+    .status-dot--saving  { background: var(--amber); animation: pulse 1s infinite; }
+    .status-dot--unsaved { background: var(--red); }
+
+    /* ── Editor body ── */
+    .editor-wrap {
+      margin-top: var(--nav-h);
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    /* Cover upload area */
+    .cover-zone {
+      width: 100%;
+      aspect-ratio: 16 / 7;
+      background: var(--ink-2);
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .cover-zone__overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--sp-2);
+      background: rgba(0,0,0,0.35);
+      opacity: 0;
+      transition: opacity var(--t-fast);
+    }
+
+    .cover-zone:hover .cover-zone__overlay,
+    .cover-zone--empty .cover-zone__overlay { opacity: 1; }
+
+    .cover-zone__icon {
+      width: 44px;
+      height: 44px;
+      background: rgba(232,160,32,0.2);
+      border-radius: var(--r-full);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--amber);
+    }
+
+    .cover-zone__icon svg { width: 22px; height: 22px; }
+
+    .cover-zone__label {
+      font-size: var(--text-sm);
+      color: rgba(255,255,255,0.85);
+      font-weight: 500;
+    }
+
+    .cover-zone__remove {
+      position: absolute;
+      top: var(--sp-2);
+      right: var(--sp-2);
+      background: rgba(0,0,0,0.6);
+      border: none;
+      border-radius: var(--r-full);
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity var(--t-fast);
+    }
+
+    .cover-zone:hover .cover-zone__remove { opacity: 1; }
+    .cover-zone__remove svg { width: 16px; height: 16px; }
+    .cover-zone__img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+
+    /* Editable fields */
+    .editor-fields {
+      padding: var(--sp-4) var(--sp-4) 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .editor-title-input {
+      width: 100%;
+      background: none;
+      border: none;
+      outline: none;
+      font-family: var(--font-display);
+      font-size: clamp(22px, 6vw, 30px);
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.25;
+      resize: none;
+      overflow: hidden;
+      padding: 0;
+      min-height: 40px;
+    }
+
+    .editor-title-input::placeholder { color: var(--ink-5); }
+
+    .editor-subtitle-input {
+      width: 100%;
+      background: none;
+      border: none;
+      outline: none;
+      font-family: var(--font-display);
+      font-size: var(--text-md);
+      font-style: italic;
+      color: var(--text-sub);
+      line-height: 1.5;
+      resize: none;
+      overflow: hidden;
+      padding: var(--sp-2) 0 0;
+      min-height: 28px;
+    }
+
+    .editor-subtitle-input::placeholder { color: var(--ink-5); }
+
+    /* Tags input */
+    .tags-input-area {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--sp-2);
+      padding: var(--sp-3) 0 var(--sp-2);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: var(--sp-2);
+    }
+
+    .tag-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      height: 24px;
+      padding: 0 var(--sp-2);
+      background: var(--amber-dim);
+      color: var(--amber);
+      border-radius: var(--r-sm);
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .tag-pill button {
+      display: flex;
+      align-items: center;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--amber);
+      padding: 0;
+      line-height: 1;
+    }
+
+    .tag-pill button svg { width: 10px; height: 10px; }
+
+    .tag-input-field {
+      flex: 1;
+      min-width: 80px;
+      background: none;
+      border: none;
+      outline: none;
+      font-size: var(--text-sm);
+      color: var(--text);
+      font-family: var(--font-body);
+      height: 24px;
+    }
+
+    .tag-input-field::placeholder { color: var(--ink-5); }
+
+    /* Toolbar */
+    .editor-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: var(--sp-2) var(--sp-3);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      scrollbar-width: none;
+      background: var(--ink-1);
+      position: sticky;
+      top: var(--nav-h);
+      z-index: 5;
+    }
+
+    .editor-toolbar::-webkit-scrollbar { display: none; }
+
+    .tb {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border-radius: var(--r-sm);
+      color: var(--text-sub);
+      background: none;
+      border: none;
+      cursor: pointer;
+      transition: background var(--t-fast), color var(--t-fast);
+      flex-shrink: 0;
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      font-weight: 600;
+    }
+
+    .tb svg { width: 16px; height: 16px; }
+    .tb:hover { background: var(--ink-3); color: var(--text); }
+    .tb--active { background: var(--amber-dim); color: var(--amber); }
+
+    .tb-sep {
+      width: 1px;
+      height: 20px;
+      background: var(--border);
+      margin: 0 2px;
+      flex-shrink: 0;
+    }
+
+    /* Main content editable */
+    .editor-content {
+      flex: 1;
+      padding: var(--sp-3) var(--sp-4) var(--sp-8);
+      font-size: var(--text-md);
+      color: var(--ink-8);
+      line-height: 1.8;
+      outline: none;
+      min-height: 300px;
+    }
+
+    /* Content-editable placeholder */
+    .editor-content:empty::before {
+      content: attr(data-placeholder);
+      color: var(--ink-5);
+      pointer-events: none;
+    }
+
+    /* Rich text styles inside editor */
+    .editor-content h1,
+    .editor-content h2,
+    .editor-content h3 {
+      font-family: var(--font-display);
+      color: var(--text);
+      margin: var(--sp-4) 0 var(--sp-2);
+      line-height: 1.3;
+    }
+
+    .editor-content h1 { font-size: var(--text-2xl); }
+    .editor-content h2 { font-size: var(--text-xl); }
+    .editor-content h3 { font-size: var(--text-lg); }
+    .editor-content p  { margin-bottom: var(--sp-3); }
+    .editor-content blockquote {
+      border-left: 3px solid var(--amber);
+      padding-left: var(--sp-4);
+      margin: var(--sp-4) 0;
+      color: var(--text-sub);
+      font-style: italic;
+      font-family: var(--font-display);
+    }
+
+    .editor-content a { color: var(--amber); text-decoration: underline; }
+
+    .editor-content code {
+      background: var(--ink-3);
+      color: var(--amber-light);
+      padding: 2px 6px;
+      border-radius: var(--r-sm);
+      font-size: 0.9em;
+    }
+
+    .editor-content ul,
+    .editor-content ol {
+      padding-left: var(--sp-5);
+      margin-bottom: var(--sp-3);
+    }
+
+    .editor-content hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: var(--sp-6) 0;
+    }
+
+    /* ── Bottom publish bar ── */
+    .publish-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: var(--sp-3) var(--sp-4);
+      padding-bottom: calc(var(--sp-3) + env(safe-area-inset-bottom, 0px));
+      background: rgba(10,10,11,0.95);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
+      z-index: 100;
+    }
+
+    .word-count {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .word-count svg { width: 13px; height: 13px; }
+
+    /* ── Publish sheet ── */
+    .publish-sheet-content {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-4);
+    }
+
+    .publish-preview {
+      background: var(--ink-3);
+      border-radius: var(--r-md);
+      padding: var(--sp-4);
+      display: flex;
+      gap: var(--sp-3);
+      align-items: flex-start;
+    }
+
+    .publish-preview__thumb {
+      width: 64px;
+      height: 64px;
+      border-radius: var(--r-md);
+      object-fit: cover;
+      background: var(--ink-4);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .publish-preview__thumb svg { width: 20px; height: 20px; color: var(--ink-6); }
+
+    .publish-preview__info { flex: 1; min-width: 0; }
+
+    .publish-preview__title {
+      font-family: var(--font-display);
+      font-size: var(--text-base);
+      font-weight: 600;
+      color: var(--text);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .publish-preview__meta {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* ── Link insert modal ── */
+    .link-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      display: flex;
+      align-items: flex-end;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity var(--t-fast);
+    }
+
+    .link-modal--open {
+      pointer-events: all;
+      opacity: 1;
+    }
+
+    .link-modal__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+    }
+
+    .link-modal__box {
+      position: relative;
+      background: var(--ink-2);
+      border-top-left-radius: var(--r-xl);
+      border-top-right-radius: var(--r-xl);
+      border-top: 1px solid var(--border);
+      padding: var(--sp-5) var(--sp-4);
+      padding-bottom: calc(var(--sp-5) + env(safe-area-inset-bottom,0px));
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-3);
+      transform: translateY(20px);
+      transition: transform var(--t-spring);
+    }
+
+    .link-modal--open .link-modal__box { transform: translateY(0); }
+
+    .link-modal__title {
+      font-family: var(--font-display);
+      font-size: var(--text-md);
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    /* Character count ring */
+    .char-ring {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .char-ring circle {
+      fill: none;
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+      transition: stroke-dashoffset var(--t-fast), stroke var(--t-fast);
+    }
+
+    .char-ring .track  { stroke: var(--ink-4); }
+    .char-ring .fill   { stroke: var(--green); stroke-dasharray: 56.5; stroke-dashoffset: 56.5; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     WRITE NAV
+══════════════════════════════════════════════════════════ -->
+<header class="write-nav">
+  <a href="index.html" class="write-nav__back" aria-label="Back" id="back-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+  </a>
+
+  <span class="write-nav__title" id="nav-title">New post</span>
+
+  <span class="write-nav__status" id="save-status">
+    <span class="status-dot" id="status-dot"></span>
+    <span id="status-text">Draft</span>
+  </span>
+
+  <button class="icon-btn" onclick="saveDraft()" aria-label="Save draft" title="Save draft">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+      <polyline points="17 21 17 13 7 13 7 21"/>
+      <polyline points="7 3 7 8 15 8"/>
+    </svg>
+  </button>
+
+  <button class="icon-btn" onclick="openPublishSheet()" aria-label="More options" title="Publish options">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="5"  r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
+    </svg>
+  </button>
+</header>
+
+<!-- ══════════════════════════════════════════════════════════
+     EDITOR
+══════════════════════════════════════════════════════════ -->
+<div class="write-page">
+  <div class="editor-wrap">
+
+    <!-- Cover image -->
+    <div class="cover-zone cover-zone--empty" id="cover-zone" onclick="triggerCoverUpload()">
+      <img class="cover-zone__img" id="cover-preview" alt="Cover" />
+      <div class="cover-zone__overlay">
+        <div class="cover-zone__icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+        </div>
+        <span class="cover-zone__label">Add cover image</span>
+      </div>
+      <button class="cover-zone__remove" id="cover-remove" onclick="removeCover(event)" aria-label="Remove cover">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+      <input type="file" id="cover-input" accept="image/*" style="display:none" onchange="handleCoverUpload(this)" />
+    </div>
+
+    <!-- Title + subtitle + tags -->
+    <div class="editor-fields">
+      <textarea
+        class="editor-title-input"
+        id="title-input"
+        placeholder="Title"
+        rows="1"
+        maxlength="120"
+        oninput="autoResize(this); onTitleInput()"
+      ></textarea>
+      <textarea
+        class="editor-subtitle-input"
+        id="subtitle-input"
+        placeholder="Subtitle (optional)"
+        rows="1"
+        maxlength="200"
+        oninput="autoResize(this)"
+      ></textarea>
+
+      <!-- Tags -->
+      <div class="tags-input-area" id="tags-area">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;color:var(--text-muted);flex-shrink:0">
+          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+          <line x1="7" y1="7" x2="7.01" y2="7"/>
+        </svg>
+        <div id="tag-pills"></div>
+        <input
+          class="tag-input-field"
+          id="tag-input"
+          placeholder="Add tags…"
+          maxlength="30"
+          onkeydown="handleTagKey(event)"
+        />
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="editor-toolbar" id="toolbar">
+      <button class="tb" title="Bold"          onclick="fmt('bold')">B</button>
+      <button class="tb" title="Italic"        onclick="fmt('italic')"><em>I</em></button>
+      <button class="tb" title="Underline"     onclick="fmt('underline')"><u>U</u></button>
+      <button class="tb" title="Strikethrough" onclick="fmt('strikeThrough')"><s>S</s></button>
+      <div class="tb-sep"></div>
+      <button class="tb" title="Heading 1" onclick="fmtBlock('h1')">H1</button>
+      <button class="tb" title="Heading 2" onclick="fmtBlock('h2')">H2</button>
+      <button class="tb" title="Heading 3" onclick="fmtBlock('h3')">H3</button>
+      <div class="tb-sep"></div>
+      <button class="tb" title="Bullet list" onclick="fmt('insertUnorderedList')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/>
+          <circle cx="4" cy="6" r="1" fill="currentColor" stroke="none"/>
+          <circle cx="4" cy="12" r="1" fill="currentColor" stroke="none"/>
+          <circle cx="4" cy="18" r="1" fill="currentColor" stroke="none"/>
+        </svg>
+      </button>
+      <button class="tb" title="Numbered list" onclick="fmt('insertOrderedList')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/>
+          <path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/>
+        </svg>
+      </button>
+      <button class="tb" title="Blockquote" onclick="fmtBlock('blockquote')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/>
+          <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/>
+        </svg>
+      </button>
+      <div class="tb-sep"></div>
+      <button class="tb" title="Insert link" onclick="openLinkModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+      </button>
+      <button class="tb" title="Horizontal rule" onclick="insertHr()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </button>
+      <button class="tb" title="Clear formatting" onclick="fmt('removeFormat')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 7V4h16v3"/><path d="M5 20h6"/><path d="M13 4 8 20"/>
+          <line x1="17" y1="17" x2="22" y2="22"/><line x1="22" y1="17" x2="17" y2="22"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Content editable area -->
+    <div
+      class="editor-content"
+      id="editor-content"
+      contenteditable="true"
+      data-placeholder="Tell your story…"
+      oninput="onContentInput()"
+    ></div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     BOTTOM PUBLISH BAR
+══════════════════════════════════════════════════════════ -->
+<div class="publish-bar">
+  <div class="word-count">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/>
+      <line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/>
+    </svg>
+    <span id="word-count-text">0 words</span>
+    <span style="color:var(--ink-5)">·</span>
+    <span id="read-time-text">0 min read</span>
+  </div>
+
+  <!-- Char count ring for title -->
+  <svg class="char-ring" viewBox="0 0 20 20" id="title-ring">
+    <circle class="track" cx="10" cy="10" r="9"/>
+    <circle class="fill"  cx="10" cy="10" r="9" id="title-ring-fill"/>
+  </svg>
+
+  <button class="btn btn--ghost btn--sm" onclick="saveDraft()">Save draft</button>
+  <button class="btn btn--primary btn--sm" onclick="openPublishSheet()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
+      <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+    </svg>
+    Publish
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     PUBLISH BOTTOM SHEET
+══════════════════════════════════════════════════════════ -->
+<div class="sheet-overlay" id="publish-overlay" onclick="closePublishSheet()"></div>
+<div class="bottom-sheet" id="publish-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title">Ready to publish?</div>
+    <button class="icon-btn" onclick="closePublishSheet()" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  <div class="sheet-body">
+    <div class="publish-sheet-content">
+
+      <!-- Preview card -->
+      <div class="publish-preview">
+        <div class="publish-preview__thumb" id="pp-thumb">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+        </div>
+        <div class="publish-preview__info">
+          <div class="publish-preview__title" id="pp-title">Your post title</div>
+          <div class="publish-preview__meta" id="pp-meta">0 words · 0 min read</div>
+        </div>
+      </div>
+
+      <!-- Validation checklist -->
+      <div id="publish-checks" style="display:flex;flex-direction:column;gap:var(--sp-2)"></div>
+
+      <!-- Action buttons -->
+      <div style="display:flex;flex-direction:column;gap:var(--sp-3);margin-top:var(--sp-2)">
+        <button class="btn btn--primary w-full" id="publish-btn" onclick="handlePublish()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px">
+            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+          Publish now
+        </button>
+        <button class="btn btn--ghost w-full" onclick="saveDraft(); closePublishSheet();">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+            <polyline points="17 21 17 13 7 13 7 21"/>
+            <polyline points="7 3 7 8 15 8"/>
+          </svg>
+          Save as draft
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     LINK INSERT MODAL
+══════════════════════════════════════════════════════════ -->
+<div class="link-modal" id="link-modal">
+  <div class="link-modal__backdrop" onclick="closeLinkModal()"></div>
+  <div class="link-modal__box">
+    <div class="link-modal__title">Insert link</div>
+    <div class="form-group">
+      <label class="form-label" for="link-text-input">Display text</label>
+      <input class="input" id="link-text-input" type="text" placeholder="Link text" />
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="link-url-input">URL</label>
+      <input class="input" id="link-url-input" type="url" placeholder="https://" />
+    </div>
+    <div style="display:flex;gap:var(--sp-3)">
+      <button class="btn btn--ghost flex-1" onclick="closeLinkModal()">Cancel</button>
+      <button class="btn btn--primary flex-1" onclick="insertLink()">Insert</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCRIPT
+══════════════════════════════════════════════════════════ -->
+<script type="module">
+import {
+  requireAuth, getUser, saveBlog, publishBlog, uploadCover,
+  slugify, toast, navigate
+} from './app.js';
+
+// ── State ────────────────────────────────────────────────────
+let currentUser  = null;
+let blogId       = null;
+let savedVersion = '';
+let autoSaveTimer = null;
+let tags          = [];
+let coverUrl      = null;
+let coverFile     = null;
+let savedRange    = null; // for link insertion
+
+// ── Init ─────────────────────────────────────────────────────
+async function init() {
+  currentUser = await requireAuth();
+  if (!currentUser) return;
+
+  // Check for ?edit=<id> to load existing draft
+  const editId = new URLSearchParams(location.search).get('edit');
+  if (editId) {
+    blogId = editId;
+    document.getElementById('nav-title').textContent = 'Edit post';
+    // Load existing blog — implement if needed
+  }
+
+  // Back button: warn if unsaved
+  document.getElementById('back-btn').addEventListener('click', (e) => {
+    if (isDirty()) {
+      e.preventDefault();
+      if (confirm('You have unsaved changes. Leave anyway?')) navigate('index.html');
+    }
+  });
+
+  document.getElementById('editor-content').focus();
+}
+
+// ── Dirty check ───────────────────────────────────────────────
+function getSnapshot() {
+  return JSON.stringify({
+    title: titleEl().value,
+    subtitle: subtitleEl().value,
+    content: contentEl().innerHTML,
+    tags,
+  });
+}
+
+function isDirty() {
+  return getSnapshot() !== savedVersion;
+}
+
+// ── Element refs ──────────────────────────────────────────────
+const titleEl    = () => document.getElementById('title-input');
+const subtitleEl = () => document.getElementById('subtitle-input');
+const contentEl  = () => document.getElementById('editor-content');
+
+// ── Title input ───────────────────────────────────────────────
+window.onTitleInput = function() {
+  const len = titleEl().value.length;
+  const max = 120;
+  const circ = document.getElementById('title-ring-fill');
+  const pct  = Math.min(len / max, 1);
+  const dash = 56.5;
+  circ.style.strokeDashoffset = dash - pct * dash;
+  circ.style.stroke = pct > 0.85 ? 'var(--red)' : pct > 0.7 ? 'var(--amber)' : 'var(--green)';
+
+  scheduleAutoSave();
+};
+
+// ── Content input ─────────────────────────────────────────────
+window.onContentInput = function() {
+  updateWordCount();
+  scheduleAutoSave();
+};
+
+function updateWordCount() {
+  const text  = contentEl().innerText || '';
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  const mins  = Math.max(1, Math.round(words / 200));
+  document.getElementById('word-count-text').textContent = `${words} word${words !== 1 ? 's' : ''}`;
+  document.getElementById('read-time-text').textContent  = `${mins} min read`;
+}
+
+// ── Auto resize textarea ──────────────────────────────────────
+window.autoResize = function(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+};
+
+// ── Formatting commands ───────────────────────────────────────
+window.fmt = function(cmd, val = null) {
+  document.execCommand(cmd, false, val);
+  contentEl().focus();
+};
+
+window.fmtBlock = function(tag) {
+  document.execCommand('formatBlock', false, tag);
+  contentEl().focus();
+};
+
+window.insertHr = function() {
+  document.execCommand('insertHTML', false, '<hr>');
+  contentEl().focus();
+};
+
+// ── Tags ──────────────────────────────────────────────────────
+window.handleTagKey = function(e) {
+  const input = document.getElementById('tag-input');
+  if ((e.key === 'Enter' || e.key === ',') && input.value.trim()) {
+    e.preventDefault();
+    const tag = input.value.trim().toLowerCase().replace(/,/g,'');
+    if (tags.length < 5 && !tags.includes(tag)) {
+      tags.push(tag);
+      renderTagPills();
+    }
+    input.value = '';
+  } else if (e.key === 'Backspace' && !input.value && tags.length) {
+    tags.pop();
+    renderTagPills();
+  }
+};
+
+function renderTagPills() {
+  const container = document.getElementById('tag-pills');
+  container.innerHTML = tags.map((t, i) => `
+    <span class="tag-pill">
+      ${t}
+      <button onclick="removeTag(${i})" aria-label="Remove tag">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </span>`).join('');
+  const input = document.getElementById('tag-input');
+  input.placeholder = tags.length >= 5 ? 'Max 5 tags' : tags.length ? '' : 'Add tags…';
+  input.disabled = tags.length >= 5;
+}
+
+window.removeTag = function(i) {
+  tags.splice(i, 1);
+  renderTagPills();
+};
+
+// ── Cover image ───────────────────────────────────────────────
+window.triggerCoverUpload = function() {
+  document.getElementById('cover-input').click();
+};
+
+window.handleCoverUpload = function(input) {
+  const file = input.files[0];
+  if (!file) return;
+  coverFile = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = document.getElementById('cover-preview');
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('cover-zone').classList.remove('cover-zone--empty');
+    updatePublishPreviewThumb(e.target.result);
+  };
+  reader.readAsDataURL(file);
+};
+
+window.removeCover = function(e) {
+  e.stopPropagation();
+  coverFile = null;
+  coverUrl  = null;
+  const img = document.getElementById('cover-preview');
+  img.src   = '';
+  img.style.display = 'none';
+  document.getElementById('cover-zone').classList.add('cover-zone--empty');
+  document.getElementById('cover-input').value = '';
+  resetPublishPreviewThumb();
+};
+
+function updatePublishPreviewThumb(src) {
+  const thumb = document.getElementById('pp-thumb');
+  thumb.innerHTML = `<img src="${src}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--r-md)" />`;
+}
+
+function resetPublishPreviewThumb() {
+  document.getElementById('pp-thumb').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;color:var(--ink-6)"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
+}
+
+// ── Auto-save (draft) ─────────────────────────────────────────
+function scheduleAutoSave() {
+  clearTimeout(autoSaveTimer);
+  setStatus('saving');
+  autoSaveTimer = setTimeout(() => saveDraft(true), 2500);
+}
+
+function setStatus(state) {
+  const dot  = document.getElementById('status-dot');
+  const text = document.getElementById('status-text');
+  dot.className = 'status-dot';
+  if (state === 'saving') { dot.classList.add('status-dot--saving'); text.textContent = 'Saving…'; }
+  else if (state === 'saved') { dot.classList.add('status-dot--saved'); text.textContent = 'Saved'; }
+  else if (state === 'unsaved') { dot.classList.add('status-dot--unsaved'); text.textContent = 'Unsaved'; }
+  else { text.textContent = 'Draft'; }
+}
+
+window.saveDraft = async function(silent = false) {
+  const title = titleEl().value.trim();
+  if (!title) { if (!silent) toast('Add a title first', 'error'); return; }
+
+  setStatus('saving');
+
+  const payload = {
+    title,
+    subtitle: subtitleEl().value.trim() || null,
+    content:  contentEl().innerHTML,
+    tags,
+    status:   'draft',
+  };
+
+  const { data, error } = await saveBlog(payload, blogId);
+
+  if (error) {
+    setStatus('unsaved');
+    if (!silent) toast('Could not save draft', 'error');
+    return;
+  }
+
+  blogId = data.id;
+  savedVersion = getSnapshot();
+  setStatus('saved');
+  if (!silent) toast('Draft saved');
+};
+
+// ── Publish ───────────────────────────────────────────────────
+window.openPublishSheet = function() {
+  updatePublishPreview();
+  buildChecklist();
+  document.getElementById('publish-overlay').classList.add('sheet-overlay--open');
+  document.getElementById('publish-sheet').classList.add('bottom-sheet--open');
+  document.body.style.overflow = 'hidden';
+};
+
+window.closePublishSheet = function() {
+  document.getElementById('publish-overlay').classList.remove('sheet-overlay--open');
+  document.getElementById('publish-sheet').classList.remove('bottom-sheet--open');
+  document.body.style.overflow = '';
+};
+
+function updatePublishPreview() {
+  const title = titleEl().value.trim() || 'Untitled post';
+  const text  = contentEl().innerText || '';
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  const mins  = Math.max(1, Math.round(words / 200));
+  document.getElementById('pp-title').textContent = title;
+  document.getElementById('pp-meta').textContent  = `${words} words · ${mins} min read`;
+}
+
+function buildChecklist() {
+  const checks = [
+    { ok: !!titleEl().value.trim(),   label: 'Title added' },
+    { ok: !!subtitleEl().value.trim(),label: 'Subtitle added (optional)', soft: true },
+    { ok: !!contentEl().innerText.trim(), label: 'Content written' },
+    { ok: tags.length > 0,            label: 'Tags added (optional)', soft: true },
+    { ok: !!coverFile || !!coverUrl,  label: 'Cover image added (optional)', soft: true },
+  ];
+  const container = document.getElementById('publish-checks');
+  container.innerHTML = checks.map(c => `
+    <div style="display:flex;align-items:center;gap:var(--sp-2);font-size:var(--text-sm);color:${c.ok ? 'var(--green)' : c.soft ? 'var(--text-muted)' : 'var(--red)'}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;flex-shrink:0">
+        ${c.ok ? '<path d="M20 6 9 17l-5-5"/>' : c.soft ? '<circle cx="12" cy="12" r="9"/>' : '<circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'}
+      </svg>
+      ${c.label}
+    </div>`).join('');
+
+  // Disable publish btn if hard checks fail
+  const canPublish = checks.filter(c => !c.soft).every(c => c.ok);
+  document.getElementById('publish-btn').disabled = !canPublish;
+}
+
+window.handlePublish = async function() {
+  const btn = document.getElementById('publish-btn');
+  btn.classList.add('btn--loading');
+  btn.disabled = true;
+
+  // 1. Save first (to get a blogId)
+  const title = titleEl().value.trim();
+  if (!title) { toast('Add a title first', 'error'); btn.classList.remove('btn--loading'); btn.disabled = false; return; }
+
+  const payload = {
+    title,
+    subtitle: subtitleEl().value.trim() || null,
+    content:  contentEl().innerHTML,
+    tags,
+    status:   'draft',
+  };
+
+  const { data: saved, error: saveErr } = await saveBlog(payload, blogId);
+  if (saveErr) { toast('Could not save', 'error'); btn.classList.remove('btn--loading'); btn.disabled = false; return; }
+  blogId = saved.id;
+
+  // 2. Upload cover if present
+  if (coverFile) {
+    const { url, error: covErr } = await uploadCover(coverFile, blogId);
+    if (!covErr && url) {
+      await saveBlog({ cover_url: url }, blogId);
+    }
+  }
+
+  // 3. Publish
+  const { error: pubErr } = await publishBlog(blogId);
+  if (pubErr) {
+    toast('Could not publish', 'error');
+    btn.classList.remove('btn--loading');
+    btn.disabled = false;
+    return;
+  }
+
+  toast('Published! 🎉', 'success');
+  setTimeout(() => navigate(`blog.html?id=${blogId}`), 800);
+};
+
+// ── Link modal ────────────────────────────────────────────────
+window.openLinkModal = function() {
+  savedRange = window.getSelection()?.getRangeAt(0)?.cloneRange() ?? null;
+  const sel  = window.getSelection()?.toString() || '';
+  document.getElementById('link-text-input').value = sel;
+  document.getElementById('link-url-input').value  = '';
+  document.getElementById('link-modal').classList.add('link-modal--open');
+  setTimeout(() => document.getElementById('link-url-input').focus(), 100);
+};
+
+window.closeLinkModal = function() {
+  document.getElementById('link-modal').classList.remove('link-modal--open');
+};
+
+window.insertLink = function() {
+  const text = document.getElementById('link-text-input').value.trim();
+  const url  = document.getElementById('link-url-input').value.trim();
+  if (!url) return;
+
+  contentEl().focus();
+
+  if (savedRange) {
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(savedRange);
+  }
+
+  document.execCommand('createLink', false, url);
+
+  // Set the display text if different
+  if (text) {
+    const link = contentEl().querySelector(`a[href="${url}"]`);
+    if (link) link.textContent = text;
+  }
+
+  closeLinkModal();
+};
+
+// ── Prevent accidental close ──────────────────────────────────
+window.addEventListener('beforeunload', (e) => {
+  if (isDirty()) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+init();
+</script>
+</body>
+</html>
