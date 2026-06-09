@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>YouBlogs — Profile</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+
+    :root { --nav-h: 52px; }
+
+    /* ── Profile nav ── */
+    .profile-nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--nav-h);
+      display: flex;
+      align-items: center;
+      padding: 0 var(--sp-3);
+      gap: var(--sp-2);
+      z-index: 100;
+      transition: background var(--t-base), border-color var(--t-base);
+    }
+
+    .profile-nav--scrolled {
+      background: rgba(10,10,11,0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .profile-nav__back {
+      display: flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px;
+      border-radius: var(--r-full);
+      background: rgba(10,10,11,0.55);
+      backdrop-filter: blur(8px);
+      color: var(--text);
+      flex-shrink: 0;
+      transition: background var(--t-fast);
+    }
+    .profile-nav__back:hover { background: rgba(30,30,34,0.9); }
+    .profile-nav__back svg { width: 20px; height: 20px; }
+
+    .profile-nav__username {
+      flex: 1;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity var(--t-base), transform var(--t-base);
+    }
+
+    .profile-nav--scrolled .profile-nav__username {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── Cover banner ── */
+    .profile-banner {
+      width: 100%;
+      height: 120px;
+      background: linear-gradient(135deg, var(--ink-2) 0%, var(--ink-3) 100%);
+      position: relative;
+      margin-top: var(--nav-h);
+      overflow: hidden;
+    }
+
+    .profile-banner img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+
+    .profile-banner__gradient {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, transparent 40%, var(--bg) 100%);
+    }
+
+    /* ── Avatar overlap ── */
+    .profile-avatar-wrap {
+      position: relative;
+      margin-top: -44px;
+      margin-left: var(--sp-4);
+      display: inline-block;
+      z-index: 2;
+    }
+
+    .profile-avatar-wrap .avatar {
+      border: 3px solid var(--bg);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+
+    .profile-avatar-edit {
+      position: absolute;
+      bottom: 0; right: 0;
+      width: 26px; height: 26px;
+      background: var(--amber);
+      border-radius: 50%;
+      border: 2px solid var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: transform var(--t-spring);
+    }
+
+    .profile-avatar-edit:hover { transform: scale(1.1); }
+    .profile-avatar-edit svg { width: 13px; height: 13px; color: var(--ink-0); }
+
+    /* ── Profile header body ── */
+    .profile-header-body {
+      padding: var(--sp-3) var(--sp-4) var(--sp-4);
+    }
+
+    .profile-name-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--sp-3);
+      margin-bottom: var(--sp-1);
+    }
+
+    .profile-display-name {
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .profile-username-tag {
+      font-size: var(--text-sm);
+      color: var(--text-muted);
+      margin-bottom: var(--sp-3);
+    }
+
+    .profile-bio {
+      font-size: var(--text-sm);
+      color: var(--text-sub);
+      line-height: 1.65;
+      margin-bottom: var(--sp-4);
+    }
+
+    .profile-website {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: var(--text-xs);
+      color: var(--amber);
+      margin-bottom: var(--sp-4);
+    }
+
+    .profile-website svg { width: 13px; height: 13px; }
+
+    /* ── Stats row ── */
+    .stats-row {
+      display: flex;
+      gap: var(--sp-5);
+      padding: var(--sp-3) 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      cursor: pointer;
+    }
+
+    .stat-item__value {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .stat-item__label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* ── Posts grid / list toggle ── */
+    .view-toggle {
+      display: flex;
+      gap: 2px;
+      background: var(--ink-3);
+      border-radius: var(--r-md);
+      padding: 3px;
+    }
+
+    .view-btn {
+      width: 32px; height: 28px;
+      border-radius: var(--r-sm);
+      display: flex; align-items: center; justify-content: center;
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted);
+      transition: background var(--t-fast), color var(--t-fast);
+    }
+
+    .view-btn svg { width: 15px; height: 15px; }
+    .view-btn--active { background: var(--ink-1); color: var(--amber); }
+
+    /* ── Posts grid ── */
+    .posts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--sp-3);
+      padding: var(--sp-3) var(--sp-4);
+    }
+
+    .grid-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+      cursor: pointer;
+      display: block;
+      transition: transform var(--t-spring), border-color var(--t-fast);
+    }
+
+    .grid-card:active { transform: scale(0.96); }
+
+    .grid-card__cover {
+      width: 100%;
+      aspect-ratio: 4/3;
+      object-fit: cover;
+      background: var(--ink-3);
+      display: block;
+    }
+
+    .grid-card__cover--placeholder {
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, var(--ink-2) 0%, var(--ink-3) 100%);
+    }
+
+    .grid-card__cover--placeholder svg {
+      width: 22px; height: 22px;
+      color: var(--ink-5);
+    }
+
+    .grid-card__body {
+      padding: var(--sp-3);
+    }
+
+    .grid-card__title {
+      font-family: var(--font-display);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: var(--sp-2);
+    }
+
+    .grid-card__meta {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .grid-card__meta svg { width: 11px; height: 11px; }
+
+    /* Draft badge */
+    .draft-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      height: 18px;
+      padding: 0 6px;
+      background: var(--ink-4);
+      color: var(--text-muted);
+      border-radius: var(--r-sm);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    /* ── Edit profile sheet ── */
+    .edit-form {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-4);
+    }
+
+    .avatar-upload-row {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-4);
+    }
+
+    .avatar-upload-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-2);
+      height: 36px;
+      padding: 0 var(--sp-4);
+      background: var(--ink-3);
+      border: 1px solid var(--border);
+      border-radius: var(--r-full);
+      font-size: var(--text-sm);
+      color: var(--text-sub);
+      cursor: pointer;
+      transition: background var(--t-fast), color var(--t-fast);
+      font-family: var(--font-body);
+    }
+
+    .avatar-upload-btn:hover { background: var(--ink-4); color: var(--text); }
+    .avatar-upload-btn svg { width: 15px; height: 15px; }
+
+    /* ── Followers/Following sheet ── */
+    .follow-list-item {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
+      padding: var(--sp-3) var(--sp-4);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background var(--t-fast);
+    }
+
+    .follow-list-item:hover { background: var(--ink-2); }
+    .follow-list-item:last-child { border-bottom: none; }
+
+    .follow-list-item__info { flex: 1; min-width: 0; }
+
+    .follow-list-item__name {
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .follow-list-item__username {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    /* ── Section tabs within profile ── */
+    .profile-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: var(--nav-h);
+      background: rgba(10,10,11,0.95);
+      backdrop-filter: blur(16px);
+      z-index: 10;
+    }
+
+    .profile-tab {
+      flex: 1;
+      height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      gap: 6px;
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--text-muted);
+      background: none; border: none;
+      cursor: pointer;
+      font-family: var(--font-body);
+      border-bottom: 2px solid transparent;
+      transition: color var(--t-fast), border-color var(--t-fast);
+      position: relative;
+      bottom: -1px;
+    }
+
+    .profile-tab svg { width: 15px; height: 15px; }
+
+    .profile-tab--active {
+      color: var(--amber);
+      border-bottom-color: var(--amber);
+    }
+
+    /* ── Inline loader ── */
+    .inline-loader {
+      display: flex; align-items: center; justify-content: center;
+      padding: var(--sp-8);
+    }
+    .inline-loader svg { width: 24px; height: 24px; color: var(--text-muted); }
+
+    /* ── Sign out btn ── */
+    .signout-row {
+      padding: var(--sp-4);
+      border-top: 1px solid var(--border);
+      margin-top: var(--sp-2);
+    }
+
+    /* Skeleton */
+    .profile-skeleton {
+      padding-top: var(--nav-h);
+    }
+
+    /* Settings cog visible only on own profile */
+    #settings-btn { display: none; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     TOP NAV
+══════════════════════════════════════════════════════════ -->
+<header class="profile-nav" id="profile-nav">
+  <a id="back-btn" href="javascript:history.back()" class="profile-nav__back" aria-label="Back">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+  </a>
+  <span class="profile-nav__username" id="nav-username">Profile</span>
+  <div style="display:flex;align-items:center;gap:var(--sp-1)">
+    <button class="icon-btn" id="settings-btn" onclick="openEditSheet()" aria-label="Edit profile" title="Edit profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════════════
+     SKELETON
+══════════════════════════════════════════════════════════ -->
+<div id="skeleton-view" class="profile-skeleton">
+  <div class="skeleton" style="width:100%;height:120px;border-radius:0"></div>
+  <div style="padding:0 var(--sp-4)">
+    <div class="skeleton" style="width:80px;height:80px;border-radius:50%;margin-top:-36px;border:3px solid var(--bg)"></div>
+    <div style="margin-top:var(--sp-3);display:flex;flex-direction:column;gap:var(--sp-2)">
+      <div class="skeleton" style="width:160px;height:22px;border-radius:var(--r-sm)"></div>
+      <div class="skeleton" style="width:100px;height:14px;border-radius:var(--r-sm)"></div>
+      <div class="skeleton" style="width:85%;height:13px;border-radius:var(--r-sm)"></div>
+      <div class="skeleton" style="width:70%;height:13px;border-radius:var(--r-sm)"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     PROFILE VIEW
+══════════════════════════════════════════════════════════ -->
+<div id="profile-view" style="display:none" class="page page--no-top page--no-bottom">
+
+  <!-- Banner -->
+  <div class="profile-banner" id="profile-banner">
+    <div class="profile-banner__gradient"></div>
+  </div>
+
+  <!-- Avatar -->
+  <div class="profile-avatar-wrap">
+    <div class="avatar avatar--xl" id="profile-avatar"></div>
+    <div class="profile-avatar-edit" id="avatar-edit-btn" style="display:none" onclick="document.getElementById('avatar-file-input').click()" title="Change avatar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>
+    </div>
+    <input type="file" id="avatar-file-input" accept="image/*" style="display:none" onchange="handleAvatarUpload(this)" />
+  </div>
+
+  <!-- Header body -->
+  <div class="profile-header-body">
+    <div class="profile-name-row">
+      <div>
+        <div class="profile-display-name" id="profile-name"></div>
+      </div>
+      <!-- Follow / Edit buttons -->
+      <div style="display:flex;gap:var(--sp-2);margin-top:var(--sp-1)">
+        <button class="btn btn--follow" id="follow-btn" style="display:none" onclick="handleFollow()">Follow</button>
+        <button class="btn btn--ghost btn--sm" id="edit-btn" style="display:none" onclick="openEditSheet()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Edit
+        </button>
+      </div>
+    </div>
+
+    <div class="profile-username-tag" id="profile-username-tag"></div>
+    <div class="profile-bio" id="profile-bio" style="display:none"></div>
+    <a class="profile-website" id="profile-website" style="display:none" target="_blank" rel="noopener noreferrer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="2" y1="12" x2="22" y2="12"/>
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+      </svg>
+      <span id="profile-website-text"></span>
+    </a>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-item" onclick="openFollowSheet('followers')">
+        <span class="stat-item__value" id="stat-followers">0</span>
+        <span class="stat-item__label">Followers</span>
+      </div>
+      <div class="stat-item" onclick="openFollowSheet('following')">
+        <span class="stat-item__value" id="stat-following">0</span>
+        <span class="stat-item__label">Following</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-item__value" id="stat-posts">0</span>
+        <span class="stat-item__label">Posts</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Profile tabs ── -->
+  <div class="profile-tabs">
+    <button class="profile-tab profile-tab--active" id="ptab-posts" onclick="switchProfileTab('posts')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>
+      Posts
+    </button>
+    <button class="profile-tab" id="ptab-drafts" style="display:none" onclick="switchProfileTab('drafts')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+      </svg>
+      Drafts
+    </button>
+  </div>
+
+  <!-- Posts container -->
+  <div id="posts-container">
+    <div class="inline-loader">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin">
+        <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Sign out (own profile only) -->
+  <div class="signout-row" id="signout-row" style="display:none">
+    <button class="btn btn--outline w-full" onclick="handleSignOut()" style="color:var(--red);border-color:var(--red)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Sign out
+    </button>
+  </div>
+
+  <!-- Bottom padding -->
+  <div style="height:calc(var(--bottom-nav-h) + var(--safe-bottom) + var(--sp-4))"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     EDIT PROFILE SHEET
+══════════════════════════════════════════════════════════ -->
+<div class="sheet-overlay" id="edit-overlay" onclick="closeEditSheet()"></div>
+<div class="bottom-sheet" id="edit-sheet" style="max-height:92dvh">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title">Edit profile</div>
+    <button class="icon-btn" onclick="closeEditSheet()" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  <div class="sheet-body">
+    <div class="edit-form">
+
+      <!-- Avatar row -->
+      <div class="avatar-upload-row">
+        <div class="avatar avatar--lg" id="edit-avatar-preview"></div>
+        <div>
+          <button class="avatar-upload-btn" onclick="document.getElementById('avatar-file-input').click()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            Upload photo
+          </button>
+          <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--sp-1)">JPG, PNG or GIF · Max 2MB</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Display name</label>
+        <input class="input" type="text" id="edit-name" placeholder="Your name" maxlength="60" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input class="input" type="text" id="edit-username" placeholder="username" maxlength="20"
+          autocapitalize="none" spellcheck="false"
+          oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9_]/g,'')" />
+        <span style="font-size:var(--text-xs);color:var(--text-muted)">youblogs.com/@<span id="username-preview">username</span></span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Bio</label>
+        <textarea class="textarea" id="edit-bio" placeholder="Tell readers about yourself…" rows="3" maxlength="160"
+          oninput="document.getElementById('bio-count').textContent=this.value.length"></textarea>
+        <span style="font-size:var(--text-xs);color:var(--text-muted)"><span id="bio-count">0</span>/160</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Website</label>
+        <input class="input" type="url" id="edit-website" placeholder="https://yoursite.com" />
+      </div>
+
+      <button class="btn btn--primary w-full" id="save-profile-btn" onclick="saveProfile()">
+        Save changes
+      </button>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     FOLLOWERS / FOLLOWING SHEET
+══════════════════════════════════════════════════════════ -->
+<div class="sheet-overlay" id="follow-overlay" onclick="closeFollowSheet()"></div>
+<div class="bottom-sheet" id="follow-sheet" style="max-height:85dvh">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title" id="follow-sheet-title">Followers</div>
+    <button class="icon-btn" onclick="closeFollowSheet()" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  <div class="sheet-body" id="follow-list" style="padding:0"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     BOTTOM NAV
+══════════════════════════════════════════════════════════ -->
+<nav class="bottom-nav">
+  <div class="bottom-nav__items">
+    <a href="index.html" class="bottom-nav__item" aria-label="Home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    </a>
+    <a href="explore.html" class="bottom-nav__item" aria-label="Explore">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+    </a>
+    <a href="write.html" class="bottom-nav__item" aria-label="Write">
+      <div class="bottom-nav__fab">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </div>
+    </a>
+    <a href="profile.html" class="bottom-nav__item bottom-nav__item--active" aria-label="Profile">
+      <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+        <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+      </svg>
+    </a>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCRIPT
+══════════════════════════════════════════════════════════ -->
+<script type="module">
+import {
+  getUser, getProfile, updateProfile, uploadAvatar,
+  getUserBlogs, followUser, unfollowUser, isFollowing,
+  signOut, supabase,
+  formatCount, timeAgo, initials, toast, navigate
+} from './app.js';
+
+// ── State ────────────────────────────────────────────────────
+let profile       = null;
+let currentUser   = null;
+let isOwnProfile  = false;
+let following     = false;
+let activeTab     = 'posts';
+let postsCache    = null;
+let draftsCache   = null;
+let viewMode      = 'grid'; // 'grid' | 'list'
+
+// ── Init ─────────────────────────────────────────────────────
+async function init() {
+  currentUser = await getUser();
+
+  // Determine whose profile to show
+  const params   = new URLSearchParams(location.search);
+  const username = params.get('u');
+
+  // No ?u param → show current user's own profile
+  if (!username) {
+    if (!currentUser) { navigate('auth.html'); return; }
+    await loadProfile(currentUser.id);
+  } else {
+    await loadProfile(username);
+  }
+
+  setupScroll();
+}
+
+// ── Load profile ──────────────────────────────────────────────
+async function loadProfile(identifier) {
+  const { data, error } = await getProfile(identifier);
+
+  if (error || !data) {
+    document.getElementById('skeleton-view').innerHTML = `
+      <div class="empty-state" style="padding-top:80px">
+        <div class="empty-state__icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+        </div>
+        <div class="empty-state__title">User not found</div>
+        <a href="index.html" class="btn btn--primary">Go home</a>
+      </div>`;
+    return;
+  }
+
+  profile      = data;
+  isOwnProfile = currentUser?.id === profile.id;
+
+  renderProfile();
+  await loadPosts('posts');
+
+  if (!isOwnProfile && currentUser) {
+    following = await isFollowing(profile.id);
+    setFollowUI(following);
+  }
+
+  document.getElementById('skeleton-view').style.display = 'none';
+  document.getElementById('profile-view').style.display  = 'block';
+}
+
+// ── Render profile header ─────────────────────────────────────
+function renderProfile() {
+  document.title = `${profile.display_name || profile.username} — YouBlogs`;
+  document.getElementById('nav-username').textContent = `@${profile.username}`;
+
+  // Avatar
+  const av = profile.avatar_url
+    ? `<img src="${profile.avatar_url}" alt="${profile.display_name}" loading="eager"/>`
+    : `<span>${initials(profile.display_name || profile.username)}</span>`;
+  document.getElementById('profile-avatar').innerHTML = av;
+
+  // Name / username
+  document.getElementById('profile-name').textContent         = profile.display_name || profile.username;
+  document.getElementById('profile-username-tag').textContent = `@${profile.username}`;
+
+  // Bio
+  if (profile.bio) {
+    const bioEl = document.getElementById('profile-bio');
+    bioEl.textContent  = profile.bio;
+    bioEl.style.display = 'block';
+  }
+
+  // Website
+  if (profile.website) {
+    const wEl = document.getElementById('profile-website');
+    wEl.href  = profile.website;
+    wEl.style.display = 'flex';
+    document.getElementById('profile-website-text').textContent =
+      profile.website.replace(/^https?:\/\//, '');
+  }
+
+  // Stats
+  document.getElementById('stat-followers').textContent = formatCount(profile.follower_count ?? 0);
+  document.getElementById('stat-following').textContent = formatCount(profile.following_count ?? 0);
+  document.getElementById('stat-posts').textContent     = formatCount(profile.blog_count ?? 0);
+
+  // Own profile extras
+  if (isOwnProfile) {
+    document.getElementById('edit-btn').style.display      = 'flex';
+    document.getElementById('settings-btn').style.display  = 'flex';
+    document.getElementById('avatar-edit-btn').style.display = 'flex';
+    document.getElementById('signout-row').style.display   = 'block';
+    document.getElementById('ptab-drafts').style.display   = 'flex';
+    document.getElementById('back-btn').href = 'index.html';
+
+    // Prefill edit form
+    document.getElementById('edit-name').value     = profile.display_name || '';
+    document.getElementById('edit-username').value = profile.username || '';
+    document.getElementById('edit-bio').value      = profile.bio || '';
+    document.getElementById('edit-website').value  = profile.website || '';
+    document.getElementById('bio-count').textContent = (profile.bio || '').length;
+    document.getElementById('edit-avatar-preview').innerHTML = av;
+
+    document.getElementById('edit-username').addEventListener('input', (e) => {
+      document.getElementById('username-preview').textContent = e.target.value || 'username';
+    });
+  } else {
+    document.getElementById('follow-btn').style.display = currentUser ? 'flex' : 'none';
+  }
+}
+
+// ── Load posts ────────────────────────────────────────────────
+async function loadPosts(tab) {
+  const container = document.getElementById('posts-container');
+  container.innerHTML = `<div class="inline-loader">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin">
+      <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+    </svg>
+  </div>`;
+
+  const isDrafts = tab === 'drafts';
+
+  let posts;
+  if (isDrafts) {
+    if (draftsCache) { posts = draftsCache; }
+    else {
+      const { data } = await getUserBlogs(profile.id, { drafts: true });
+      draftsCache = (data || []).filter(b => b.status === 'draft');
+      posts = draftsCache;
+    }
+  } else {
+    if (postsCache) { posts = postsCache; }
+    else {
+      const { data } = await getUserBlogs(profile.id, { drafts: false });
+      postsCache = data || [];
+      posts = postsCache;
+    }
+  }
+
+  container.innerHTML = '';
+
+  if (!posts.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state__icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+        <div class="empty-state__title">${isDrafts ? 'No drafts' : 'No posts yet'}</div>
+        <div class="empty-state__sub">${isOwnProfile
+          ? isDrafts ? 'Your unfinished drafts appear here.' : 'Start writing your first post.'
+          : 'This writer hasn\'t published anything yet.'}</div>
+        ${isOwnProfile ? `<a href="write.html" class="btn btn--primary">Write something</a>` : ''}
+      </div>`;
+    return;
+  }
+
+  // View toggle header
+  const header = document.createElement('div');
+  header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:var(--sp-3) var(--sp-4) var(--sp-2)';
+  header.innerHTML = `
+    <span style="font-size:var(--text-xs);color:var(--text-muted);font-weight:500;text-transform:uppercase;letter-spacing:0.06em">
+      ${posts.length} ${isDrafts ? 'draft' : 'post'}${posts.length !== 1 ? 's' : ''}
+    </span>
+    <div class="view-toggle">
+      <button class="view-btn ${viewMode==='grid'?'view-btn--active':''}" onclick="setViewMode('grid')" title="Grid view">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+      </button>
+      <button class="view-btn ${viewMode==='list'?'view-btn--active':''}" onclick="setViewMode('list')" title="List view">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+          <line x1="8" y1="18" x2="21" y2="18"/>
+          <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/>
+          <line x1="3" y1="18" x2="3.01" y2="18"/>
+        </svg>
+      </button>
+    </div>`;
+  container.appendChild(header);
+
+  if (viewMode === 'grid') {
+    const grid = document.createElement('div');
+    grid.className = 'posts-grid';
+    posts.forEach(p => grid.appendChild(createGridCard(p, isDrafts)));
+    container.appendChild(grid);
+  } else {
+    const list = document.createElement('div');
+    list.className = 'feed';
+    list.style.paddingTop = '0';
+    posts.forEach(p => list.appendChild(createListCard(p, isDrafts)));
+    container.appendChild(list);
+  }
+}
+
+// ── Grid card ─────────────────────────────────────────────────
+function createGridCard(post, isDraft) {
+  const card = document.createElement('a');
+  card.href  = isDraft ? `write.html?edit=${post.id}` : `blog.html?slug=${post.slug}`;
+  card.className = 'grid-card';
+  card.style.animationDelay = '0ms';
+
+  card.innerHTML = `
+    ${post.cover_url
+      ? `<img class="grid-card__cover" src="${post.cover_url}" alt="${post.title}" loading="lazy"/>`
+      : `<div class="grid-card__cover grid-card__cover--placeholder">
+           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+             <rect x="3" y="3" width="18" height="18" rx="2"/>
+             <path d="m3 9 4-4 4 4 4-4 4 4"/><path d="M3 15h18"/>
+           </svg>
+         </div>`}
+    <div class="grid-card__body">
+      ${isDraft ? '<span class="draft-badge">Draft</span>' : ''}
+      <div class="grid-card__title">${post.title}</div>
+      <div class="grid-card__meta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+        ${post.read_time ?? 1}m
+        ${!isDraft ? `
+          <span style="color:var(--ink-5)">·</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+          ${formatCount(post.like_count)}` : `
+          <span style="color:var(--ink-5)">·</span>
+          ${timeAgo(post.updated_at)}`}
+      </div>
+    </div>`;
+  return card;
+}
+
+// ── List card ─────────────────────────────────────────────────
+function createListCard(post, isDraft) {
+  const card = document.createElement('a');
+  card.href  = isDraft ? `write.html?edit=${post.id}` : `blog.html?slug=${post.slug}`;
+  card.className = 'blog-card blog-card--compact';
+
+  const av = profile.avatar_url
+    ? `<img src="${profile.avatar_url}" alt="" loading="lazy"/>`
+    : `<span>${initials(profile.display_name || profile.username)}</span>`;
+
+  card.innerHTML = `
+    <div class="blog-card__body">
+      <div class="blog-card__text-area">
+        <div class="blog-card__author">
+          <div class="avatar avatar--xs">${av}</div>
+          <span class="blog-card__author-name">${profile.display_name || profile.username}</span>
+          ${isDraft
+            ? `<span class="draft-badge">Draft</span>`
+            : `<span class="blog-card__time">${timeAgo(post.published_at)}</span>`}
+        </div>
+        <div class="blog-card__title">${post.title}</div>
+        ${post.subtitle ? `<div class="blog-card__excerpt">${post.subtitle}</div>` : ''}
+        <div class="blog-card__footer" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+          <span class="read-time">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            ${post.read_time ?? 1}m
+          </span>
+          ${!isDraft ? `
+            <span class="blog-card__spacer"></span>
+            <span style="font-size:var(--text-xs);color:var(--text-muted);display:flex;align-items:center;gap:4px">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+              ${formatCount(post.like_count)}
+            </span>` : ''}
+        </div>
+      </div>
+      ${post.cover_url
+        ? `<img class="blog-card__thumb" src="${post.cover_url}" alt="" loading="lazy"/>`
+        : `<div class="blog-card__thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:22px;height:22px;color:var(--ink-5)"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m3 9 4-4 4 4 4-4 4 4"/><path d="M3 15h18"/></svg></div>`}
+    </div>`;
+  return card;
+}
+
+// ── View mode toggle ──────────────────────────────────────────
+window.setViewMode = function(mode) {
+  viewMode = mode;
+  postsCache  = null;
+  draftsCache = null;
+  loadPosts(activeTab);
+};
+
+// ── Tab switching ─────────────────────────────────────────────
+window.switchProfileTab = function(tab) {
+  activeTab = tab;
+  ['posts','drafts'].forEach(t => {
+    document.getElementById(`ptab-${t}`)?.classList.toggle('profile-tab--active', t === tab);
+  });
+  postsCache  = null;
+  draftsCache = null;
+  loadPosts(tab);
+};
+
+// ── Follow / Unfollow ─────────────────────────────────────────
+function setFollowUI(val) {
+  const btn = document.getElementById('follow-btn');
+  btn.textContent = val ? 'Following' : 'Follow';
+  btn.className   = `btn btn--${val ? 'following' : 'follow'}`;
+  following = val;
+}
+
+window.handleFollow = async function() {
+  if (!currentUser) { navigate('auth.html'); return; }
+  const was = following;
+  setFollowUI(!was);
+
+  // Update follower count optimistically
+  const statEl = document.getElementById('stat-followers');
+  const current = parseInt(statEl.textContent.replace(/[^\d]/g, '')) || 0;
+  statEl.textContent = formatCount(Math.max(0, current + (!was ? 1 : -1)));
+
+  const { error } = await (was ? unfollowUser(profile.id) : followUser(profile.id));
+  if (error) {
+    setFollowUI(was);
+    statEl.textContent = formatCount(current);
+    toast('Could not update', 'error');
+  } else {
+    toast(!was ? `Following ${profile.display_name || profile.username}` : 'Unfollowed');
+  }
+};
+
+// ── Edit profile ──────────────────────────────────────────────
+window.openEditSheet = function() {
+  document.getElementById('edit-overlay').classList.add('sheet-overlay--open');
+  document.getElementById('edit-sheet').classList.add('bottom-sheet--open');
+  document.body.style.overflow = 'hidden';
+};
+
+window.closeEditSheet = function() {
+  document.getElementById('edit-overlay').classList.remove('sheet-overlay--open');
+  document.getElementById('edit-sheet').classList.remove('bottom-sheet--open');
+  document.body.style.overflow = '';
+};
+
+window.saveProfile = async function() {
+  const btn      = document.getElementById('save-profile-btn');
+  const name     = document.getElementById('edit-name').value.trim();
+  const username = document.getElementById('edit-username').value.trim();
+  const bio      = document.getElementById('edit-bio').value.trim();
+  const website  = document.getElementById('edit-website').value.trim();
+
+  if (!name) { toast('Display name is required', 'error'); return; }
+  if (!username) { toast('Username is required', 'error'); return; }
+  if (!/^[a-z0-9_]{3,20}$/.test(username)) {
+    toast('Username: 3–20 chars, letters/numbers/underscores', 'error'); return;
+  }
+
+  btn.classList.add('btn--loading');
+  btn.disabled = true;
+
+  const { data, error } = await updateProfile({
+    display_name: name,
+    username,
+    bio:          bio || null,
+    website:      website || null,
+  });
+
+  btn.classList.remove('btn--loading');
+  btn.disabled = false;
+
+  if (error) {
+    toast(error.message?.includes('unique') ? 'Username already taken' : 'Could not save profile', 'error');
+    return;
+  }
+
+  // Update local state
+  profile = { ...profile, ...data };
+  document.getElementById('profile-name').textContent         = data.display_name || data.username;
+  document.getElementById('profile-username-tag').textContent = `@${data.username}`;
+  document.getElementById('nav-username').textContent         = `@${data.username}`;
+  if (data.bio) {
+    const bioEl = document.getElementById('profile-bio');
+    bioEl.textContent  = data.bio;
+    bioEl.style.display = 'block';
+  }
+
+  toast('Profile updated', 'success');
+  closeEditSheet();
+};
+
+// ── Avatar upload ─────────────────────────────────────────────
+window.handleAvatarUpload = async function(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { toast('Image too large (max 2MB)', 'error'); return; }
+
+  // Preview immediately
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const imgHtml = `<img src="${e.target.result}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`;
+    document.getElementById('profile-avatar').innerHTML    = imgHtml;
+    document.getElementById('edit-avatar-preview').innerHTML = imgHtml;
+  };
+  reader.readAsDataURL(file);
+
+  toast('Uploading…');
+  const { url, error } = await uploadAvatar(file);
+  if (error) { toast('Upload failed', 'error'); return; }
+  toast('Avatar updated', 'success');
+};
+
+// ── Followers / Following list ────────────────────────────────
+window.openFollowSheet = async function(type) {
+  document.getElementById('follow-sheet-title').textContent =
+    type === 'followers' ? 'Followers' : 'Following';
+  document.getElementById('follow-overlay').classList.add('sheet-overlay--open');
+  document.getElementById('follow-sheet').classList.add('bottom-sheet--open');
+  document.body.style.overflow = 'hidden';
+
+  const listEl = document.getElementById('follow-list');
+  listEl.innerHTML = `<div class="inline-loader"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin" style="width:24px;height:24px;color:var(--text-muted)"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg></div>`;
+
+  // Fetch from Supabase
+  const col  = type === 'followers' ? 'following_id' : 'follower_id';
+  const join = type === 'followers' ? 'follower_id'  : 'following_id';
+
+  const { data, error } = await supabase
+    .from('follows')
+    .select(`${join}, profiles:${join}(id, username, display_name, avatar_url, bio)`)
+    .eq(col, profile.id)
+    .limit(100);
+
+  listEl.innerHTML = '';
+
+  if (error || !data?.length) {
+    listEl.innerHTML = `<div class="empty-state" style="padding:var(--sp-8) var(--sp-4)">
+      <div class="empty-state__sub">No ${type} yet</div>
+    </div>`;
+    return;
+  }
+
+  data.forEach(row => {
+    const p   = row.profiles;
+    const av  = p.avatar_url
+      ? `<img src="${p.avatar_url}" alt="" loading="lazy"/>`
+      : `<span>${initials(p.display_name || p.username)}</span>`;
+
+    const item = document.createElement('div');
+    item.className = 'follow-list-item';
+    item.innerHTML = `
+      <div class="avatar avatar--sm">${av}</div>
+      <div class="follow-list-item__info">
+        <div class="follow-list-item__name">${p.display_name || p.username}</div>
+        <div class="follow-list-item__username">@${p.username}</div>
+        ${p.bio ? `<div style="font-size:var(--text-xs);color:var(--text-sub);margin-top:1px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden">${p.bio}</div>` : ''}
+      </div>`;
+    item.onclick = () => {
+      closeFollowSheet();
+      navigate(`profile.html?u=${p.username}`);
+    };
+    listEl.appendChild(item);
+  });
+};
+
+window.closeFollowSheet = function() {
+  document.getElementById('follow-overlay').classList.remove('sheet-overlay--open');
+  document.getElementById('follow-sheet').classList.remove('bottom-sheet--open');
+  document.body.style.overflow = '';
+};
+
+// ── Sign out ──────────────────────────────────────────────────
+window.handleSignOut = async function() {
+  if (!confirm('Sign out of YouBlogs?')) return;
+  await signOut();
+};
+
+// ── Scroll behaviour ──────────────────────────────────────────
+function setupScroll() {
+  const nav = document.getElementById('profile-nav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('profile-nav--scrolled', window.scrollY > 80);
+  }, { passive: true });
+}
+
+init();
+</script>
+</body>
+</html>
