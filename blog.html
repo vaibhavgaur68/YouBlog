@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>YouBlogs — Read</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+
+    /* ── Reading-specific overrides ── */
+    :root { --nav-h: 52px; }
+
+    body { overflow-x: hidden; }
+
+    /* ── Top nav (translucent on scroll) ── */
+    .read-nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--nav-h);
+      display: flex;
+      align-items: center;
+      padding: 0 var(--sp-3);
+      gap: var(--sp-2);
+      z-index: 100;
+      transition: background var(--t-base), border-color var(--t-base), backdrop-filter var(--t-base);
+    }
+
+    .read-nav--scrolled {
+      background: rgba(10,10,11,0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .read-nav__back {
+      display: flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px;
+      border-radius: var(--r-full);
+      background: rgba(10,10,11,0.6);
+      backdrop-filter: blur(8px);
+      color: var(--text);
+      flex-shrink: 0;
+      transition: background var(--t-fast);
+    }
+    .read-nav__back:hover { background: rgba(30,30,34,0.9); }
+    .read-nav__back svg { width: 20px; height: 20px; }
+
+    .read-nav__title {
+      flex: 1;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity var(--t-base), transform var(--t-base);
+    }
+
+    .read-nav--scrolled .read-nav__title {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .read-nav__actions {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-1);
+    }
+
+    .read-nav__actions .icon-btn {
+      background: rgba(10,10,11,0.6);
+      backdrop-filter: blur(8px);
+    }
+
+    /* ── Hero cover ── */
+    .hero-cover-wrap {
+      position: relative;
+      width: 100%;
+      padding-top: var(--nav-h);
+    }
+
+    .hero-cover {
+      width: 100%;
+      aspect-ratio: 16/9;
+      object-fit: cover;
+      display: block;
+      background: var(--ink-3);
+    }
+
+    .hero-cover-placeholder {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: linear-gradient(135deg, var(--ink-2) 0%, var(--ink-3) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hero-cover-placeholder svg {
+      width: 48px; height: 48px;
+      color: var(--ink-5);
+    }
+
+    /* ── Article meta ── */
+    .article-meta {
+      padding: var(--sp-5) var(--sp-4) var(--sp-4);
+    }
+
+    .article-title {
+      font-family: var(--font-display);
+      font-size: clamp(22px, 6vw, 32px);
+      font-weight: 700;
+      line-height: 1.22;
+      color: var(--text);
+      margin-bottom: var(--sp-3);
+      letter-spacing: -0.01em;
+    }
+
+    .article-subtitle {
+      font-family: var(--font-display);
+      font-size: var(--text-md);
+      font-style: italic;
+      color: var(--text-sub);
+      line-height: 1.5;
+      margin-bottom: var(--sp-4);
+    }
+
+    /* Author row */
+    .author-row {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
+      padding: var(--sp-3) 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .author-row__info { flex: 1; min-width: 0; }
+
+    .author-row__name {
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .author-row__name:hover { color: var(--amber); }
+
+    .author-row__meta {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+      margin-top: 1px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .author-row__meta svg { width: 11px; height: 11px; }
+
+    /* Tags under meta */
+    .article-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+      padding: var(--sp-3) 0 0;
+    }
+
+    /* ── Prose content ── */
+    .article-body {
+      padding: var(--sp-5) var(--sp-4) var(--sp-4);
+      font-size: 17px;
+      line-height: 1.82;
+      color: var(--ink-8);
+      word-break: break-word;
+    }
+
+    .article-body h1, .article-body h2, .article-body h3 {
+      font-family: var(--font-display);
+      color: var(--text);
+      margin: var(--sp-6) 0 var(--sp-3);
+      line-height: 1.28;
+    }
+
+    .article-body h1 { font-size: var(--text-2xl); }
+    .article-body h2 { font-size: var(--text-xl);  }
+    .article-body h3 { font-size: var(--text-lg);  }
+
+    .article-body p  { margin-bottom: var(--sp-4); }
+
+    .article-body a {
+      color: var(--amber);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .article-body blockquote {
+      border-left: 3px solid var(--amber);
+      padding: var(--sp-2) var(--sp-4);
+      margin: var(--sp-5) 0;
+      color: var(--text-sub);
+      font-style: italic;
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      background: var(--amber-dim);
+      border-radius: 0 var(--r-md) var(--r-md) 0;
+    }
+
+    .article-body code {
+      background: var(--ink-3);
+      color: var(--amber-light);
+      padding: 2px 7px;
+      border-radius: var(--r-sm);
+      font-size: 0.88em;
+    }
+
+    .article-body pre {
+      background: var(--ink-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: var(--sp-4);
+      overflow-x: auto;
+      margin: var(--sp-4) 0;
+    }
+
+    .article-body pre code {
+      background: none; padding: 0;
+      color: var(--ink-8);
+    }
+
+    .article-body ul, .article-body ol {
+      padding-left: var(--sp-6);
+      margin-bottom: var(--sp-4);
+    }
+
+    .article-body li { margin-bottom: var(--sp-2); }
+
+    .article-body img {
+      width: 100%;
+      border-radius: var(--r-md);
+      margin: var(--sp-4) 0;
+    }
+
+    .article-body hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: var(--sp-8) 0;
+      position: relative;
+    }
+
+    .article-body hr::after {
+      content: '· · ·';
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg);
+      padding: 0 var(--sp-3);
+      color: var(--ink-5);
+      font-size: 14px;
+      letter-spacing: 4px;
+    }
+
+    /* ── Floating action bar ── */
+    .fab-bar {
+      position: sticky;
+      bottom: calc(var(--bottom-nav-h) + var(--safe-bottom) + var(--sp-3));
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      background: rgba(26,26,30,0.94);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: var(--r-full);
+      padding: 5px 8px;
+      margin: 0 auto var(--sp-4);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      width: fit-content;
+      z-index: 50;
+      animation: fadeUp 0.4s var(--t-spring) both;
+      animation-delay: 0.3s;
+    }
+
+    .fab-action {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 10px;
+      border-radius: var(--r-full);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--text-sub);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-body);
+      transition: background var(--t-fast), color var(--t-fast), transform var(--t-spring);
+      white-space: nowrap;
+    }
+
+    .fab-action svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .fab-action:active { transform: scale(0.9); }
+    .fab-action:hover { background: var(--ink-3); color: var(--text); }
+
+    .fab-action--liked  { color: var(--red); }
+    .fab-action--liked:hover  { background: var(--red-dim); color: var(--red); }
+
+    .fab-action--saved  { color: var(--amber); }
+    .fab-action--saved:hover  { background: var(--amber-dim); color: var(--amber); }
+
+    .fab-sep {
+      width: 1px; height: 18px;
+      background: var(--border);
+      margin: 0 2px;
+      flex-shrink: 0;
+    }
+
+    /* ── Reading progress bar ── */
+    .read-progress {
+      position: fixed;
+      top: 0; left: 0;
+      height: 2px;
+      background: var(--amber);
+      z-index: 200;
+      width: 0%;
+      transition: width 0.1s linear;
+      box-shadow: 0 0 6px var(--amber-glow);
+    }
+
+    /* ── More from author ── */
+    .more-section {
+      padding: var(--sp-5) var(--sp-4) 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .more-section__header {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: var(--sp-4);
+    }
+
+    /* ── Comments sheet ── */
+    .comment-count-label {
+      font-family: var(--font-display);
+      font-size: var(--text-sm);
+      color: var(--text-sub);
+      margin-left: 2px;
+    }
+
+    /* Reply box */
+    .reply-box {
+      background: var(--ink-3);
+      border-radius: var(--r-md);
+      padding: var(--sp-3);
+      margin-top: var(--sp-2);
+      display: none;
+      flex-direction: column;
+      gap: var(--sp-2);
+    }
+
+    .reply-box--open { display: flex; }
+
+    .reply-box textarea {
+      background: none;
+      border: none;
+      outline: none;
+      resize: none;
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 60px;
+      width: 100%;
+    }
+
+    .reply-box textarea::placeholder { color: var(--text-muted); }
+
+    .reply-box__actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--sp-2);
+    }
+
+    /* ── Share sheet ── */
+    .share-options {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--sp-3);
+      padding: var(--sp-4) var(--sp-2);
+    }
+
+    .share-option {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--sp-2);
+      cursor: pointer;
+      padding: var(--sp-2);
+      border-radius: var(--r-md);
+      transition: background var(--t-fast);
+    }
+
+    .share-option:hover { background: var(--ink-3); }
+    .share-option:active { transform: scale(0.93); }
+
+    .share-option__icon {
+      width: 48px; height: 48px;
+      border-radius: var(--r-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .share-option__icon svg { width: 22px; height: 22px; }
+
+    .share-option__label {
+      font-size: 11px;
+      color: var(--text-sub);
+      font-weight: 500;
+      text-align: center;
+    }
+
+    .share-link-row {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
+      background: var(--ink-3);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: var(--sp-3) var(--sp-4);
+      margin: 0 var(--sp-2) var(--sp-4);
+      cursor: pointer;
+      transition: border-color var(--t-fast);
+    }
+
+    .share-link-row:hover { border-color: var(--amber); }
+
+    .share-link-row__url {
+      flex: 1;
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .share-link-row svg { width: 16px; height: 16px; color: var(--amber); flex-shrink: 0; }
+
+    /* skeleton for blog page */
+    .article-skeleton {
+      padding: var(--sp-4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-3);
+      padding-top: calc(var(--nav-h) + var(--sp-4));
+    }
+
+    /* ── Delete confirm ── */
+    .danger-zone {
+      padding: var(--sp-4);
+      border-top: 1px solid var(--border);
+      margin-top: var(--sp-4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-3);
+    }
+
+    .danger-zone__title {
+      font-size: var(--text-sm);
+      color: var(--text-muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Reading progress bar -->
+<div class="read-progress" id="read-progress"></div>
+
+<!-- ══════════════════════════════════════════════════════════
+     TOP NAV
+══════════════════════════════════════════════════════════ -->
+<header class="read-nav" id="read-nav">
+  <a href="javascript:history.back()" class="read-nav__back" aria-label="Back">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+  </a>
+  <span class="read-nav__title" id="nav-title">Loading…</span>
+  <div class="read-nav__actions">
+    <button class="icon-btn" id="bookmark-nav-btn" aria-label="Bookmark" onclick="handleBookmark()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+      </svg>
+    </button>
+    <button class="icon-btn" aria-label="Share" onclick="openShareSheet()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+      </svg>
+    </button>
+    <button class="icon-btn" id="more-btn" aria-label="More" onclick="toggleMoreMenu()" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════════════
+     SKELETON (while loading)
+══════════════════════════════════════════════════════════ -->
+<div id="skeleton-view">
+  <div class="skeleton" style="width:100%;aspect-ratio:16/9;border-radius:0;margin-top:var(--nav-h)"></div>
+  <div class="article-skeleton">
+    <div class="skeleton" style="height:36px;width:85%;border-radius:var(--r-md)"></div>
+    <div class="skeleton" style="height:20px;width:65%;border-radius:var(--r-md)"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin:8px 0">
+      <div class="skeleton" style="width:40px;height:40px;border-radius:50%"></div>
+      <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+        <div class="skeleton" style="height:13px;width:120px;border-radius:4px"></div>
+        <div class="skeleton" style="height:11px;width:80px;border-radius:4px"></div>
+      </div>
+    </div>
+    ${[90,100,75,95,60,85,70].map(w=>`<div class="skeleton" style="height:14px;width:${w}%;border-radius:4px"></div>`).join('')}
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     ARTICLE
+══════════════════════════════════════════════════════════ -->
+<article id="article-view" style="display:none">
+
+  <!-- Cover -->
+  <div class="hero-cover-wrap">
+    <div id="cover-container"></div>
+  </div>
+
+  <!-- Meta -->
+  <div class="article-meta" id="article-meta">
+    <h1 class="article-title" id="article-title"></h1>
+    <p  class="article-subtitle" id="article-subtitle" style="display:none"></p>
+
+    <!-- Author -->
+    <div class="author-row" id="author-row">
+      <div class="avatar avatar--md" id="author-avatar" onclick="goToProfile()"></div>
+      <div class="author-row__info">
+        <div class="author-row__name" id="author-name" onclick="goToProfile()"></div>
+        <div class="author-row__meta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <span id="author-meta"></span>
+        </div>
+      </div>
+      <button class="btn btn--follow" id="follow-btn" onclick="handleFollow()" style="display:none">Follow</button>
+    </div>
+
+    <!-- Tags -->
+    <div class="article-tags" id="article-tags"></div>
+  </div>
+
+  <!-- Body -->
+  <div class="article-body" id="article-body"></div>
+
+  <!-- Floating action bar -->
+  <div class="fab-bar" id="fab-bar">
+    <button class="fab-action" id="fab-like" onclick="handleLike()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+      </svg>
+      <span id="like-count">0</span>
+    </button>
+
+    <div class="fab-sep"></div>
+
+    <button class="fab-action" id="fab-comment" onclick="openComments()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      <span id="comment-count">0</span>
+    </button>
+
+    <div class="fab-sep"></div>
+
+    <button class="fab-action" id="fab-bookmark" onclick="handleBookmark()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+      </svg>
+    </button>
+
+    <div class="fab-sep"></div>
+
+    <button class="fab-action" onclick="openShareSheet()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- More from author -->
+  <div class="more-section" id="more-section" style="display:none">
+    <div class="more-section__header" id="more-section-title">More from this writer</div>
+    <div class="feed" id="more-feed" style="padding:0 0 var(--sp-4)"></div>
+  </div>
+
+  <!-- Author's own post: danger zone -->
+  <div class="danger-zone" id="danger-zone" style="display:none">
+    <div class="danger-zone__title">Post actions</div>
+    <a id="edit-btn" href="#" class="btn btn--ghost w-full">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+      </svg>
+      Edit post
+    </a>
+    <button class="btn btn--danger w-full" onclick="confirmDelete()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px">
+        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+        <path d="M10 11v6"/><path d="M14 11v6"/>
+        <path d="M9 6V4h6v2"/>
+      </svg>
+      Delete post
+    </button>
+  </div>
+
+</article>
+
+<!-- ══════════════════════════════════════════════════════════
+     COMMENTS BOTTOM SHEET
+══════════════════════════════════════════════════════════ -->
+<div class="sheet-overlay" id="comments-overlay" onclick="closeComments()"></div>
+<div class="bottom-sheet" id="comments-sheet" style="max-height:85dvh">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title">
+      Comments
+      <span class="comment-count-label" id="sheet-comment-count"></span>
+    </div>
+    <button class="icon-btn" onclick="closeComments()" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Comments list -->
+  <div class="sheet-body" id="comments-list"></div>
+
+  <!-- Comment input -->
+  <div class="comment-input-row" id="comment-input-row">
+    <div class="avatar avatar--xs" id="commenter-avatar"></div>
+    <textarea
+      class="textarea"
+      id="comment-input"
+      placeholder="Add a comment…"
+      rows="1"
+      oninput="autoResizeComment(this)"
+      onkeydown="handleCommentKey(event)"
+    ></textarea>
+    <button class="icon-btn icon-btn--active" id="send-btn" onclick="submitComment()" aria-label="Send" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SHARE SHEET
+══════════════════════════════════════════════════════════ -->
+<div class="sheet-overlay" id="share-overlay" onclick="closeShareSheet()"></div>
+<div class="bottom-sheet" id="share-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title">Share post</div>
+    <button class="icon-btn" onclick="closeShareSheet()" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  <div class="sheet-body" style="padding:0">
+    <!-- Copy link row -->
+    <div class="share-link-row" onclick="copyLink()">
+      <span class="share-link-row__url" id="share-url-text"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+      </svg>
+    </div>
+    <!-- Share options -->
+    <div class="share-options">
+      <div class="share-option" onclick="shareVia('twitter')">
+        <div class="share-option__icon" style="background:#e8f4fd">
+          <svg viewBox="0 0 24 24" fill="#1da1f2" stroke="none">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          </svg>
+        </div>
+        <span class="share-option__label">X</span>
+      </div>
+      <div class="share-option" onclick="shareVia('whatsapp')">
+        <div class="share-option__icon" style="background:#e8fdf0">
+          <svg viewBox="0 0 24 24" fill="#25d366" stroke="none">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/>
+          </svg>
+        </div>
+        <span class="share-option__label">WhatsApp</span>
+      </div>
+      <div class="share-option" onclick="shareVia('linkedin')">
+        <div class="share-option__icon" style="background:#e8f0fb">
+          <svg viewBox="0 0 24 24" fill="#0a66c2" stroke="none">
+            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+          </svg>
+        </div>
+        <span class="share-option__label">LinkedIn</span>
+      </div>
+      <div class="share-option" onclick="shareVia('native')">
+        <div class="share-option__icon" style="background:var(--ink-3)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-sub)">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+        </div>
+        <span class="share-option__label">More</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     BOTTOM NAV
+══════════════════════════════════════════════════════════ -->
+<nav class="bottom-nav">
+  <div class="bottom-nav__items">
+    <a href="index.html" class="bottom-nav__item" aria-label="Home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    </a>
+    <a href="explore.html" class="bottom-nav__item" aria-label="Explore">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+    </a>
+    <a href="write.html" class="bottom-nav__item" aria-label="Write">
+      <div class="bottom-nav__fab">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </div>
+    </a>
+    <a href="profile.html" class="bottom-nav__item" aria-label="Profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+    </a>
+  </div>
+</nav>
+
+<script type="module">
+import {
+  getUser, getBlog, getUserBlogs,
+  likeBlog, unlikeBlog, isLiked,
+  toggleBookmark, getMyBookmarkedIds,
+  followUser, unfollowUser, isFollowing,
+  deleteBlog,
+  getComments, postComment, deleteComment, likeComment,
+  subscribeToComments, subscribeToBlogLikes, unsubscribe,
+  formatCount, timeAgo, initials, truncate, toast, navigate
+} from './app.js';
+
+// ── State ────────────────────────────────────────────────────
+let blog           = null;
+let currentUser    = null;
+let liked          = false;
+let bookmarked     = false;
+let following      = false;
+let comments       = [];
+let replyingTo     = null;   // comment id being replied to
+let commentsLoaded = false;
+let commentChannel = null;
+let likeChannel    = null;
+
+// ── Init ─────────────────────────────────────────────────────
+async function init() {
+  currentUser = await getUser();
+
+  const params = new URLSearchParams(location.search);
+  const slug   = params.get('slug');
+  const id     = params.get('id');
+
+  if (!slug && !id) { navigate('index.html'); return; }
+
+  const identifier = slug || id;
+  const { data, error } = await getBlog(slug || `id:${id}`);
+
+  if (error || !data) {
+    document.getElementById('skeleton-view').innerHTML = `
+      <div class="empty-state" style="padding-top:80px">
+        <div class="empty-state__icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <div class="empty-state__title">Post not found</div>
+        <a href="index.html" class="btn btn--primary">Go home</a>
+      </div>`;
+    return;
+  }
+
+  blog = data;
+  renderBlog();
+  await Promise.all([
+    loadSocialState(),
+    loadMorePosts(),
+  ]);
+  setupRealtime();
+  setupScrollBehavior();
+
+  // Auto-open comments if #comments in URL
+  if (location.hash === '#comments') openComments();
+}
+
+// ── Render blog ───────────────────────────────────────────────
+function renderBlog() {
+  document.title = `${blog.title} — YouBlogs`;
+  document.getElementById('nav-title').textContent = blog.title;
+
+  // Cover
+  const coverContainer = document.getElementById('cover-container');
+  if (blog.cover_url) {
+    coverContainer.innerHTML = `<img class="hero-cover" src="${blog.cover_url}" alt="${blog.title}" loading="eager"/>`;
+  } else {
+    coverContainer.innerHTML = `<div class="hero-cover-placeholder">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+        <polyline points="21 15 16 10 5 21"/>
+      </svg>
+    </div>`;
+  }
+
+  // Title + subtitle
+  document.getElementById('article-title').textContent = blog.title;
+  if (blog.subtitle) {
+    const sub = document.getElementById('article-subtitle');
+    sub.textContent = blog.subtitle;
+    sub.style.display = 'block';
+  }
+
+  // Author
+  const av = blog.avatar_url
+    ? `<img src="${blog.avatar_url}" alt="${blog.display_name}" loading="lazy"/>`
+    : `<span>${initials(blog.display_name || blog.username)}</span>`;
+  document.getElementById('author-avatar').innerHTML = av;
+  document.getElementById('author-name').textContent  = blog.display_name || blog.username;
+
+  const readMins = blog.read_time ?? 1;
+  const dateStr  = blog.published_at
+    ? new Date(blog.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : '';
+  document.getElementById('author-meta').textContent = `${dateStr} · ${readMins} min read`;
+
+  // Tags
+  if (blog.tags?.length) {
+    document.getElementById('article-tags').innerHTML =
+      blog.tags.map(t => `<a href="explore.html?q=${t}" class="tag">${t}</a>`).join('');
+  }
+
+  // Content
+  document.getElementById('article-body').innerHTML = blog.content || '';
+
+  // Counts
+  document.getElementById('like-count').textContent    = formatCount(blog.like_count);
+  document.getElementById('comment-count').textContent = formatCount(blog.comment_count);
+  document.getElementById('share-url-text').textContent = location.href;
+
+  // Show article
+  document.getElementById('skeleton-view').style.display = 'none';
+  document.getElementById('article-view').style.display  = 'block';
+
+  // Author actions (own post vs other)
+  if (currentUser && currentUser.id === blog.author_id) {
+    document.getElementById('danger-zone').style.display = 'flex';
+    document.getElementById('edit-btn').href = `write.html?edit=${blog.id}`;
+    document.getElementById('more-btn').style.display = 'flex';
+    document.getElementById('follow-btn').style.display = 'none';
+  } else if (blog.author_id) {
+    document.getElementById('follow-btn').style.display = 'flex';
+  }
+}
+
+// ── Social state ──────────────────────────────────────────────
+async function loadSocialState() {
+  if (!currentUser || !blog) return;
+
+  const [l, [bm], f] = await Promise.all([
+    isLiked(blog.id),
+    getMyBookmarkedIds([blog.id]).then(s => [s.has(blog.id)]),
+    blog.author_id !== currentUser.id ? isFollowing(blog.author_id) : Promise.resolve(false),
+  ]);
+
+  liked      = l;
+  bookmarked = bm;
+  following  = f;
+
+  setLikedUI(liked);
+  setBookmarkedUI(bookmarked);
+  setFollowUI(following);
+}
+
+function setLikedUI(val) {
+  const btn = document.getElementById('fab-like');
+  const svg = btn.querySelector('svg');
+  btn.classList.toggle('fab-action--liked', val);
+  svg.setAttribute('fill', val ? 'currentColor' : 'none');
+  svg.style.transform = val ? 'scale(1.1)' : '';
+}
+
+function setBookmarkedUI(val) {
+  const fab = document.getElementById('fab-bookmark');
+  const nav = document.getElementById('bookmark-nav-btn');
+  const fabSvg = fab.querySelector('svg');
+  const navSvg = nav.querySelector('svg');
+  fab.classList.toggle('fab-action--saved', val);
+  fabSvg.setAttribute('fill', val ? 'currentColor' : 'none');
+  navSvg.setAttribute('fill', val ? 'currentColor' : 'none');
+}
+
+function setFollowUI(val) {
+  const btn = document.getElementById('follow-btn');
+  btn.textContent = val ? 'Following' : 'Follow';
+  btn.className   = `btn btn--${val ? 'following' : 'follow'}`;
+  following = val;
+}
+
+// ── Like ──────────────────────────────────────────────────────
+window.handleLike = async function() {
+  if (!currentUser) { toast('Sign in to like'); navigate('/auth.html'); return; }
+
+  const was = liked;
+  liked     = !was;
+  setLikedUI(liked);
+
+  const countEl = document.getElementById('like-count');
+  const current = parseInt(countEl.textContent.replace(/[^\d]/g, '')) || blog.like_count || 0;
+  blog.like_count = Math.max(0, current + (liked ? 1 : -1));
+  countEl.textContent = formatCount(blog.like_count);
+
+  // Bounce
+  const svg = document.getElementById('fab-like').querySelector('svg');
+  svg.style.transition = 'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)';
+  svg.style.transform  = 'scale(1.4)';
+  setTimeout(() => { svg.style.transform = liked ? 'scale(1.1)' : 'scale(1)'; }, 200);
+
+  const { error } = await (was ? unlikeBlog(blog.id) : likeBlog(blog.id));
+  if (error) { liked = was; setLikedUI(liked); toast('Could not update', 'error'); }
+};
+
+// ── Bookmark ──────────────────────────────────────────────────
+window.handleBookmark = async function() {
+  if (!currentUser) { toast('Sign in to save'); navigate('/auth.html'); return; }
+  const was = bookmarked;
+  bookmarked = !was;
+  setBookmarkedUI(bookmarked);
+  const { error } = await toggleBookmark(blog.id);
+  if (error) { bookmarked = was; setBookmarkedUI(bookmarked); return; }
+  toast(bookmarked ? 'Saved to bookmarks' : 'Removed from bookmarks');
+};
+
+// ── Follow ────────────────────────────────────────────────────
+window.handleFollow = async function() {
+  if (!currentUser) { toast('Sign in to follow'); navigate('/auth.html'); return; }
+  const was = following;
+  setFollowUI(!was);
+  const { error } = await (was ? unfollowUser(blog.author_id) : followUser(blog.author_id));
+  if (error) { setFollowUI(was); return; }
+  toast(!was ? `Following ${blog.display_name || blog.username}` : 'Unfollowed');
+};
+
+window.goToProfile = () => navigate(`profile.html?u=${blog.username}`);
+
+// ── More from author ──────────────────────────────────────────
+async function loadMorePosts() {
+  if (!blog?.author_id) return;
+  const { data } = await getUserBlogs(blog.author_id);
+  const others = (data || []).filter(b => b.id !== blog.id).slice(0, 3);
+  if (!others.length) return;
+
+  const section = document.getElementById('more-section');
+  const feed    = document.getElementById('more-feed');
+  document.getElementById('more-section-title').textContent =
+    `More from ${blog.display_name || blog.username}`;
+
+  others.forEach(b => {
+    const card = document.createElement('a');
+    card.href  = `blog.html?slug=${b.slug}`;
+    card.className = 'blog-card blog-card--compact';
+    const av = blog.avatar_url
+      ? `<img src="${blog.avatar_url}" alt="" loading="lazy"/>`
+      : `<span>${initials(blog.display_name || blog.username)}</span>`;
+    card.innerHTML = `
+      <div class="blog-card__body">
+        <div class="blog-card__text-area">
+          <div class="blog-card__author">
+            <div class="avatar avatar--xs">${av}</div>
+            <span class="blog-card__author-name">${blog.display_name || blog.username}</span>
+            <span class="blog-card__time">${timeAgo(b.published_at)}</span>
+          </div>
+          <div class="blog-card__title">${b.title}</div>
+          ${b.subtitle ? `<div class="blog-card__excerpt">${b.subtitle}</div>` : ''}
+          <div class="blog-card__footer" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+            <span class="read-time">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              ${b.read_time ?? 1}m
+            </span>
+            <span class="blog-card__spacer"></span>
+            <span style="font-size:var(--text-xs);color:var(--text-muted);display:flex;align-items:center;gap:4px">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+              ${formatCount(b.like_count)}
+            </span>
+          </div>
+        </div>
+        ${b.cover_url
+          ? `<img class="blog-card__thumb" src="${b.cover_url}" alt="" loading="lazy"/>`
+          : `<div class="blog-card__thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:22px;height:22px;color:var(--ink-5)"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m3 9 4-4 4 4 4-4 4 4"/><path d="M3 15h18"/></svg></div>`
+        }
+      </div>`;
+    feed.appendChild(card);
+  });
+
+  section.style.display = 'block';
+}
+
+// ── COMMENTS ──────────────────────────────────────────────────
+window.openComments = async function() {
+  document.getElementById('comments-overlay').classList.add('sheet-overlay--open');
+  document.getElementById('comments-sheet').classList.add('bottom-sheet--open');
+  document.body.style.overflow = 'hidden';
+
+  // Commenter avatar
+  if (currentUser) {
+    const { getMyProfile } = await import('./app.js');
+    const profile = await getMyProfile();
+    const av = document.getElementById('commenter-avatar');
+    av.innerHTML = profile?.avatar_url
+      ? `<img src="${profile.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`
+      : `<span>${initials(profile?.display_name || 'U')}</span>`;
+  }
+
+  // Enable send btn on input
+  const input   = document.getElementById('comment-input');
+  const sendBtn = document.getElementById('send-btn');
+  input.addEventListener('input', () => {
+    sendBtn.disabled = !input.value.trim();
+  });
+
+  if (!commentsLoaded) await loadComments();
+};
+
+window.closeComments = function() {
+  document.getElementById('comments-overlay').classList.remove('sheet-overlay--open');
+  document.getElementById('comments-sheet').classList.remove('bottom-sheet--open');
+  document.body.style.overflow = '';
+  replyingTo = null;
+};
+
+async function loadComments() {
+  const list = document.getElementById('comments-list');
+  list.innerHTML = `<div class="inline-loader" style="padding:var(--sp-6)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin" style="width:24px;height:24px;color:var(--text-muted)">
+      <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+    </svg>
+  </div>`;
+
+  const { data, error } = await getComments(blog.id);
+  list.innerHTML = '';
+  commentsLoaded = true;
+
+  if (error || !data?.length) {
+    list.innerHTML = `<div class="empty-state" style="padding:var(--sp-8) var(--sp-4)">
+      <div class="empty-state__icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      </div>
+      <div class="empty-state__sub">Be the first to comment</div>
+    </div>`;
+    return;
+  }
+
+  comments = data;
+  data.forEach(c => list.appendChild(createCommentEl(c)));
+  updateCommentCount(data.length);
+}
+
+function createCommentEl(c, isReply = false) {
+  const el  = document.createElement('div');
+  el.id     = `comment-${c.id}`;
+  el.className = `comment${isReply ? ' comment--reply' : ''}`;
+
+  const av = c.profiles?.avatar_url
+    ? `<img src="${c.profiles.avatar_url}" alt="" loading="lazy"/>`
+    : `<span>${initials(c.profiles?.display_name || '?')}</span>`;
+
+  const isOwn = currentUser && currentUser.id === c.author_id;
+
+  el.innerHTML = `
+    <div class="avatar avatar--xs">${av}</div>
+    <div class="comment__body">
+      <div class="comment__header">
+        <span class="comment__name">${c.profiles?.display_name || c.profiles?.username || 'User'}</span>
+        <span class="comment__time">${timeAgo(c.created_at)}</span>
+      </div>
+      <div class="comment__text">${escHtml(c.content)}</div>
+      <div class="comment__actions">
+        <button class="comment__action" data-cid="${c.id}" onclick="handleCommentLike(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+          ${c.like_count > 0 ? formatCount(c.like_count) : ''}
+        </button>
+        ${!isReply && currentUser ? `
+          <button class="comment__action" onclick="startReply('${c.id}', '${escAttr(c.profiles?.display_name || '')}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>
+            </svg>
+            Reply
+          </button>` : ''}
+        ${isOwn ? `
+          <button class="comment__action" style="color:var(--red);margin-left:auto" onclick="handleDeleteComment('${c.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6"/><path d="M14 11v6"/>
+            </svg>
+          </button>` : ''}
+      </div>
+      <div class="reply-box" id="reply-box-${c.id}">
+        <textarea placeholder="Reply to ${escHtml(c.profiles?.display_name || 'user')}…" rows="2"
+          oninput="autoResizeComment(this)"
+          onkeydown="handleReplyKey(event, '${c.id}')"></textarea>
+        <div class="reply-box__actions">
+          <button class="btn btn--ghost btn--sm" onclick="cancelReply('${c.id}')">Cancel</button>
+          <button class="btn btn--primary btn--sm" onclick="submitReply('${c.id}')">Reply</button>
+        </div>
+      </div>
+      <div id="replies-${c.id}"></div>
+    </div>`;
+  return el;
+}
+
+// ── Submit comment ────────────────────────────────────────────
+window.submitComment = async function() {
+  if (!currentUser) { toast('Sign in to comment'); navigate('/auth.html'); return; }
+  const input = document.getElementById('comment-input');
+  const text  = input.value.trim();
+  if (!text) return;
+
+  input.value   = '';
+  input.style.height = '';
+  document.getElementById('send-btn').disabled = true;
+
+  const { data, error } = await postComment(blog.id, text, null);
+  if (error) { toast('Could not post comment', 'error'); return; }
+
+  const list = document.getElementById('comments-list');
+  // Remove empty state if present
+  list.querySelector('.empty-state')?.remove();
+  list.appendChild(createCommentEl(data));
+  updateCommentCount('+1');
+  list.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+};
+
+window.handleCommentKey = function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitComment(); }
+};
+
+// ── Reply ─────────────────────────────────────────────────────
+window.startReply = function(commentId, name) {
+  // Close any open reply box
+  if (replyingTo) document.getElementById(`reply-box-${replyingTo}`)?.classList.remove('reply-box--open');
+  replyingTo = commentId;
+  const box = document.getElementById(`reply-box-${commentId}`);
+  box.classList.add('reply-box--open');
+  box.querySelector('textarea')?.focus();
+};
+
+window.cancelReply = function(commentId) {
+  document.getElementById(`reply-box-${commentId}`)?.classList.remove('reply-box--open');
+  replyingTo = null;
+};
+
+window.submitReply = async function(parentId) {
+  if (!currentUser) { navigate('/auth.html'); return; }
+  const box      = document.getElementById(`reply-box-${parentId}`);
+  const textarea = box.querySelector('textarea');
+  const text     = textarea.value.trim();
+  if (!text) return;
+
+  textarea.value = '';
+  box.classList.remove('reply-box--open');
+  replyingTo = null;
+
+  const { data, error } = await postComment(blog.id, text, parentId);
+  if (error) { toast('Could not post reply', 'error'); return; }
+
+  const repliesContainer = document.getElementById(`replies-${parentId}`);
+  repliesContainer.appendChild(createCommentEl(data, true));
+  updateCommentCount('+1');
+};
+
+window.handleReplyKey = function(e, parentId) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitReply(parentId); }
+};
+
+// ── Delete comment ────────────────────────────────────────────
+window.handleDeleteComment = async function(commentId) {
+  if (!confirm('Delete this comment?')) return;
+  const { error } = await deleteComment(commentId);
+  if (error) { toast('Could not delete', 'error'); return; }
+  document.getElementById(`comment-${commentId}`)?.remove();
+  updateCommentCount('-1');
+};
+
+// ── Comment like ──────────────────────────────────────────────
+window.handleCommentLike = async function(btn) {
+  if (!currentUser) { toast('Sign in to like'); return; }
+  const { liked } = await likeComment(btn.dataset.cid);
+  const svg = btn.querySelector('svg');
+  svg.setAttribute('fill', liked ? 'currentColor' : 'none');
+  svg.style.color = liked ? 'var(--red)' : '';
+};
+
+function updateCommentCount(val) {
+  const el = document.getElementById('comment-count');
+  const sheet = document.getElementById('sheet-comment-count');
+  let current = blog.comment_count || 0;
+  if (val === '+1') current++;
+  else if (val === '-1') current = Math.max(0, current - 1);
+  else current = val;
+  blog.comment_count = current;
+  el.textContent    = formatCount(current);
+  sheet.textContent = current ? `· ${current}` : '';
+}
+
+// ── Auto resize ───────────────────────────────────────────────
+window.autoResizeComment = function(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+};
+
+// ── Realtime ──────────────────────────────────────────────────
+function setupRealtime() {
+  if (!blog) return;
+
+  commentChannel = subscribeToComments(blog.id, (payload) => {
+    if (!commentsLoaded) return;
+    if (payload.eventType === 'INSERT') {
+      // Skip own inserts (already rendered optimistically)
+      if (currentUser && payload.new.author_id === currentUser.id) return;
+      loadComments();
+    } else if (payload.eventType === 'DELETE') {
+      document.getElementById(`comment-${payload.old.id}`)?.remove();
+    }
+  });
+
+  likeChannel = subscribeToBlogLikes(blog.id, (payload) => {
+    const delta = payload.eventType === 'INSERT' ? 1 : -1;
+    blog.like_count = Math.max(0, (blog.like_count || 0) + delta);
+    document.getElementById('like-count').textContent = formatCount(blog.like_count);
+  });
+}
+
+// ── Scroll behaviour ──────────────────────────────────────────
+function setupScrollBehavior() {
+  const nav      = document.getElementById('read-nav');
+  const progress = document.getElementById('read-progress');
+  const article  = document.getElementById('article-view');
+
+  window.addEventListener('scroll', () => {
+    const scrollY  = window.scrollY;
+    const docH     = document.documentElement.scrollHeight - window.innerHeight;
+    const pct      = docH > 0 ? (scrollY / docH) * 100 : 0;
+    progress.style.width = pct + '%';
+    nav.classList.toggle('read-nav--scrolled', scrollY > 60);
+  }, { passive: true });
+}
+
+// ── Delete post ───────────────────────────────────────────────
+window.confirmDelete = async function() {
+  if (!confirm('Delete this post? This cannot be undone.')) return;
+  const { error } = await deleteBlog(blog.id);
+  if (error) { toast('Could not delete', 'error'); return; }
+  toast('Post deleted');
+  setTimeout(() => navigate('index.html'), 800);
+};
+
+window.toggleMoreMenu = function() {
+  // Could open a sheet with edit/delete — for now same as danger zone scroll
+  document.getElementById('danger-zone')?.scrollIntoView({ behavior: 'smooth' });
+};
+
+// ── Share ─────────────────────────────────────────────────────
+window.openShareSheet = function() {
+  document.getElementById('share-overlay').classList.add('sheet-overlay--open');
+  document.getElementById('share-sheet').classList.add('bottom-sheet--open');
+  document.body.style.overflow = 'hidden';
+};
+
+window.closeShareSheet = function() {
+  document.getElementById('share-overlay').classList.remove('sheet-overlay--open');
+  document.getElementById('share-sheet').classList.remove('bottom-sheet--open');
+  document.body.style.overflow = '';
+};
+
+window.copyLink = async function() {
+  try {
+    await navigator.clipboard.writeText(location.href);
+    toast('Link copied!', 'success');
+    closeShareSheet();
+  } catch { toast('Could not copy', 'error'); }
+};
+
+window.shareVia = function(platform) {
+  const url   = encodeURIComponent(location.href);
+  const title = encodeURIComponent(blog?.title || 'Check out this post on YouBlogs');
+  const urls  = {
+    twitter:  `https://twitter.com/intent/tweet?url=${url}&text=${title}`,
+    whatsapp: `https://wa.me/?text=${title}%20${url}`,
+    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${url}`,
+    native:   null,
+  };
+
+  if (platform === 'native' && navigator.share) {
+    navigator.share({ title: blog?.title, url: location.href }).catch(() => {});
+    closeShareSheet();
+    return;
+  }
+
+  if (urls[platform]) {
+    window.open(urls[platform], '_blank', 'noopener,noreferrer');
+    closeShareSheet();
+  }
+};
+
+// ── Helpers ───────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function escAttr(str) { return escHtml(str).replace(/'/g,'&#39;'); }
+
+// ── Cleanup ───────────────────────────────────────────────────
+window.addEventListener('pagehide', () => {
+  unsubscribe(commentChannel);
+  unsubscribe(likeChannel);
+});
+
+init();
+</script>
+</body>
+</html>
