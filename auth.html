@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>INKBLOT — Sign In</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* ── Auth-specific styles ── */
+    body { overflow: hidden; }
+
+    .auth-page {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Ambient background glow */
+    .auth-page::before {
+      content: '';
+      position: absolute;
+      top: -120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 480px;
+      height: 480px;
+      background: radial-gradient(circle, rgba(232,160,32,0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Brand hero ── */
+    .auth-hero {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 56px var(--sp-6) var(--sp-8);
+      position: relative;
+      z-index: 1;
+      text-align: center;
+    }
+
+    .auth-logo {
+      width: 52px;
+      height: 52px;
+      background: var(--amber);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: var(--sp-4);
+      box-shadow: 0 8px 32px var(--amber-glow);
+    }
+
+    .auth-logo svg {
+      width: 28px;
+      height: 28px;
+      color: var(--ink-0);
+    }
+
+    .auth-wordmark {
+      font-family: var(--font-display);
+      font-size: var(--text-3xl);
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+
+    .auth-wordmark span { color: var(--amber); }
+
+    .auth-tagline {
+      font-size: var(--text-sm);
+      color: var(--text-muted);
+      margin-top: var(--sp-2);
+      letter-spacing: 0.01em;
+    }
+
+    /* ── Card ── */
+    .auth-card {
+      flex: 1;
+      background: var(--surface);
+      border-top-left-radius: var(--r-xl);
+      border-top-right-radius: var(--r-xl);
+      border-top: 1px solid var(--border);
+      padding: var(--sp-6) var(--sp-5);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-5);
+      position: relative;
+      z-index: 1;
+      overflow-y: auto;
+      padding-bottom: calc(var(--sp-8) + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* ── Tab switcher ── */
+    .auth-tabs {
+      display: flex;
+      background: var(--ink-3);
+      border-radius: var(--r-full);
+      padding: 3px;
+      gap: 3px;
+    }
+
+    .auth-tab {
+      flex: 1;
+      height: 36px;
+      border-radius: var(--r-full);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      transition: background var(--t-spring), color var(--t-fast),
+                  transform var(--t-spring), box-shadow var(--t-fast);
+      font-family: var(--font-body);
+    }
+
+    .auth-tab--active {
+      background: var(--ink-1);
+      color: var(--text);
+      box-shadow: var(--shadow-sm);
+      transform: scale(1.02);
+    }
+
+    /* ── Forms ── */
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-4);
+    }
+
+    .auth-form--hidden {
+      display: none;
+    }
+
+    /* Password field wrapper */
+    .password-field {
+      position: relative;
+    }
+
+    .password-field .input {
+      padding-right: 48px;
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      cursor: pointer;
+      background: none;
+      border: none;
+      border-radius: 0 var(--r-md) var(--r-md) 0;
+      transition: color var(--t-fast);
+    }
+
+    .password-toggle:hover { color: var(--text); }
+    .password-toggle:active { transform: scale(0.9); }
+    .password-toggle svg { width: 18px; height: 18px; pointer-events: none; }
+
+    /* ── Strength meter ── */
+    .strength-meter {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-1);
+    }
+
+    .strength-bars {
+      display: flex;
+      gap: 4px;
+    }
+
+    .strength-bar {
+      flex: 1;
+      height: 3px;
+      border-radius: 2px;
+      background: var(--ink-4);
+      transition: background var(--t-base);
+    }
+
+    .strength-bar--weak   { background: var(--red); }
+    .strength-bar--fair   { background: #e8a020; }
+    .strength-bar--good   { background: #a3c940; }
+    .strength-bar--strong { background: var(--green); }
+
+    .strength-label {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+    }
+
+    /* ── Divider with text ── */
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .auth-divider span {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    /* ── Terms text ── */
+    .auth-terms {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .auth-terms a {
+      color: var(--amber);
+      text-decoration: underline;
+    }
+
+    /* ── Error banner ── */
+    .auth-error {
+      background: var(--red-dim);
+      border: 1px solid rgba(240,78,78,0.2);
+      border-radius: var(--r-md);
+      padding: var(--sp-3) var(--sp-4);
+      display: flex;
+      align-items: center;
+      gap: var(--sp-2);
+      font-size: var(--text-sm);
+      color: var(--red);
+      display: none;
+    }
+
+    .auth-error--show { display: flex; }
+    .auth-error svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* ── Success state ── */
+    .auth-success {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: var(--sp-4);
+      padding: var(--sp-6) 0;
+      animation: fadeUp 0.4s var(--t-spring) both;
+    }
+
+    .auth-success--show { display: flex; }
+
+    .auth-success__icon {
+      width: 64px;
+      height: 64px;
+      background: rgba(62,207,142,0.12);
+      border-radius: var(--r-full);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--green);
+    }
+
+    .auth-success__icon svg { width: 30px; height: 30px; }
+
+    .auth-success__title {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      color: var(--text);
+    }
+
+    .auth-success__sub {
+      font-size: var(--text-sm);
+      color: var(--text-sub);
+      max-width: 260px;
+    }
+
+    /* ── Submit button loading state ── */
+    .btn--loading {
+      pointer-events: none;
+      position: relative;
+      color: transparent !important;
+    }
+
+    .btn--loading::after {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(0,0,0,0.25);
+      border-top-color: var(--ink-0);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    /* form field focus animation */
+    .form-group { position: relative; }
+    .form-group .input { transition: border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast); }
+    .form-group .input:focus { transform: translateY(-1px); }
+  </style>
+</head>
+<body>
+
+<div class="auth-page">
+
+  <!-- ── Hero ── -->
+  <div class="auth-hero">
+    <div class="auth-logo">
+      <!-- Pen nib icon -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 20h9"/>
+        <path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/>
+      </svg>
+    </div>
+    <div class="auth-wordmark">Ink<span>blot</span></div>
+    <div class="auth-tagline">Read. Write. Resonate.</div>
+  </div>
+
+  <!-- ── Card ── -->
+  <div class="auth-card">
+
+    <!-- Tab switcher -->
+    <div class="auth-tabs" role="tablist">
+      <button class="auth-tab auth-tab--active" id="tab-signin" role="tab" aria-selected="true" onclick="switchTab('signin')">Sign in</button>
+      <button class="auth-tab" id="tab-signup" role="tab" aria-selected="false" onclick="switchTab('signup')">Create account</button>
+    </div>
+
+    <!-- ── SIGN IN FORM ── -->
+    <div id="form-signin" class="auth-form" role="tabpanel">
+
+      <!-- Error banner -->
+      <div class="auth-error" id="signin-error">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="signin-error-msg">Invalid email or password.</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="signin-email">Email</label>
+        <input
+          class="input"
+          type="email"
+          id="signin-email"
+          placeholder="you@example.com"
+          autocomplete="email"
+          inputmode="email"
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="signin-password">Password</label>
+        <div class="password-field">
+          <input
+            class="input"
+            type="password"
+            id="signin-password"
+            placeholder="Your password"
+            autocomplete="current-password"
+          />
+          <button
+            class="password-toggle"
+            type="button"
+            onclick="togglePassword('signin-password', this)"
+            aria-label="Show password"
+          >
+            <!-- Eye icon (show) -->
+            <svg id="signin-eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <button class="btn btn--primary w-full" id="signin-btn" onclick="handleSignIn()">
+        Sign in
+      </button>
+
+      <div class="auth-divider"><span>or</span></div>
+
+      <div style="text-align:center">
+        <button
+          style="font-size:var(--text-sm);color:var(--amber);background:none;border:none;cursor:pointer;font-family:var(--font-body);"
+          onclick="switchTab('signup')"
+        >
+          No account? Create one →
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ── SIGN UP FORM ── -->
+    <div id="form-signup" class="auth-form auth-form--hidden" role="tabpanel">
+
+      <!-- Success state -->
+      <div class="auth-success" id="signup-success">
+        <div class="auth-success__icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 6 9 17l-5-5"/>
+          </svg>
+        </div>
+        <div class="auth-success__title">Check your inbox</div>
+        <div class="auth-success__sub">We've sent a confirmation link to your email. Click it to activate your account.</div>
+        <button class="btn btn--ghost" onclick="switchTab('signin')">Back to sign in</button>
+      </div>
+
+      <!-- The actual form (hidden after success) -->
+      <div id="signup-fields">
+
+        <!-- Error banner -->
+        <div class="auth-error" id="signup-error" style="margin-bottom:var(--sp-4)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span id="signup-error-msg">Something went wrong.</span>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:var(--sp-4)">
+
+          <div class="form-group">
+            <label class="form-label" for="signup-name">Display name</label>
+            <input
+              class="input"
+              type="text"
+              id="signup-name"
+              placeholder="Ada Lovelace"
+              autocomplete="name"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="signup-username">Username</label>
+            <input
+              class="input"
+              type="text"
+              id="signup-username"
+              placeholder="ada_writes"
+              autocomplete="username"
+              autocapitalize="none"
+              spellcheck="false"
+              oninput="sanitizeUsername(this)"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="signup-email">Email</label>
+            <input
+              class="input"
+              type="email"
+              id="signup-email"
+              placeholder="you@example.com"
+              autocomplete="email"
+              inputmode="email"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="signup-password">Password</label>
+            <div class="password-field">
+              <input
+                class="input"
+                type="password"
+                id="signup-password"
+                placeholder="Min. 8 characters"
+                autocomplete="new-password"
+                oninput="updateStrength(this.value)"
+              />
+              <button
+                class="password-toggle"
+                type="button"
+                onclick="togglePassword('signup-password', this)"
+                aria-label="Show password"
+              >
+                <svg id="signup-eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+            <!-- Strength meter -->
+            <div class="strength-meter" id="strength-meter" style="display:none">
+              <div class="strength-bars">
+                <div class="strength-bar" id="bar-1"></div>
+                <div class="strength-bar" id="bar-2"></div>
+                <div class="strength-bar" id="bar-3"></div>
+                <div class="strength-bar" id="bar-4"></div>
+              </div>
+              <span class="strength-label" id="strength-label"></span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="signup-confirm">Confirm password</label>
+            <div class="password-field">
+              <input
+                class="input"
+                type="password"
+                id="signup-confirm"
+                placeholder="Repeat password"
+                autocomplete="new-password"
+              />
+              <button
+                class="password-toggle"
+                type="button"
+                onclick="togglePassword('signup-confirm', this)"
+                aria-label="Show password"
+              >
+                <svg id="signup-confirm-eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <button class="btn btn--primary w-full" id="signup-btn" onclick="handleSignUp()">
+            Create account
+          </button>
+
+          <p class="auth-terms">
+            By signing up you agree to our
+            <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+          </p>
+
+          <div style="text-align:center">
+            <button
+              style="font-size:var(--text-sm);color:var(--amber);background:none;border:none;cursor:pointer;font-family:var(--font-body);"
+              onclick="switchTab('signin')"
+            >
+              Already have an account? Sign in →
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </div><!-- /auth-card -->
+</div><!-- /auth-page -->
+
+<script type="module">
+  import { signIn, signUp, redirectIfAuthed } from './app.js';
+
+  // Redirect if already logged in
+  redirectIfAuthed();
+
+  // ── Tab switching ──────────────────────────────────────────
+  window.switchTab = function(tab) {
+    const tabs   = { signin: document.getElementById('tab-signin'),   signup: document.getElementById('tab-signup') };
+    const forms  = { signin: document.getElementById('form-signin'),  signup: document.getElementById('form-signup') };
+    const errors = { signin: document.getElementById('signin-error'), signup: document.getElementById('signup-error') };
+
+    Object.entries(tabs).forEach(([key, el]) => {
+      el.classList.toggle('auth-tab--active', key === tab);
+      el.setAttribute('aria-selected', key === tab);
+    });
+    Object.entries(forms).forEach(([key, el]) => {
+      el.classList.toggle('auth-form--hidden', key !== tab);
+    });
+    Object.values(errors).forEach(el => el.classList.remove('auth-error--show'));
+  };
+
+  // ── Password visibility toggle ─────────────────────────────
+  // Eye open SVG
+  const EYE_OPEN = `<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>`;
+  // Eye closed SVG
+  const EYE_CLOSED = `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>`;
+
+  window.togglePassword = function(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const svg   = btn.querySelector('svg');
+    const isHidden = input.type === 'password';
+
+    input.type = isHidden ? 'text' : 'password';
+    svg.innerHTML = isHidden ? EYE_CLOSED : EYE_OPEN;
+
+    // Animate the toggle button
+    btn.style.transform = 'scale(0.8)';
+    setTimeout(() => btn.style.transform = '', 150);
+
+    btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+
+    // Keep focus in the input
+    input.focus();
+    // Move cursor to end
+    const len = input.value.length;
+    input.setSelectionRange(len, len);
+  };
+
+  // ── Username sanitiser ─────────────────────────────────────
+  window.sanitizeUsername = function(input) {
+    input.value = input.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+  };
+
+  // ── Password strength meter ────────────────────────────────
+  window.updateStrength = function(pw) {
+    const meter = document.getElementById('strength-meter');
+    const label = document.getElementById('strength-label');
+    const bars  = [1,2,3,4].map(i => document.getElementById(`bar-${i}`));
+
+    if (!pw) { meter.style.display = 'none'; return; }
+    meter.style.display = 'flex';
+
+    let score = 0;
+    if (pw.length >= 8)                        score++;
+    if (pw.length >= 12)                       score++;
+    if (/[A-Z]/.test(pw) && /[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw))              score++;
+
+    const levels = ['', 'weak', 'fair', 'good', 'strong'];
+    const labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+    const colors = ['', 'var(--red)', 'var(--amber)', '#a3c940', 'var(--green)'];
+
+    bars.forEach((bar, i) => {
+      bar.className = 'strength-bar';
+      bar.style.background = i < score ? colors[score] : '';
+      if (i < score) bar.classList.add(`strength-bar--${levels[score]}`);
+    });
+
+    label.textContent = labels[score] || '';
+    label.style.color = colors[score];
+  };
+
+  // ── Sign In ────────────────────────────────────────────────
+  window.handleSignIn = async function() {
+    const email    = document.getElementById('signin-email').value.trim();
+    const password = document.getElementById('signin-password').value;
+    const btn      = document.getElementById('signin-btn');
+    const errorEl  = document.getElementById('signin-error');
+    const errorMsg = document.getElementById('signin-error-msg');
+
+    errorEl.classList.remove('auth-error--show');
+
+    if (!email || !password) {
+      errorMsg.textContent = 'Please fill in all fields.';
+      errorEl.classList.add('auth-error--show');
+      return;
+    }
+
+    btn.classList.add('btn--loading');
+    btn.disabled = true;
+
+    const { error } = await signIn(email, password);
+
+    btn.classList.remove('btn--loading');
+    btn.disabled = false;
+
+    if (error) {
+      errorMsg.textContent = error.message || 'Invalid email or password.';
+      errorEl.classList.add('auth-error--show');
+      // Shake the card
+      const card = document.querySelector('.auth-card');
+      card.style.animation = 'shake 0.35s ease';
+      setTimeout(() => card.style.animation = '', 350);
+    } else {
+      window.location.href = '/index.html';
+    }
+  };
+
+  // ── Sign Up ────────────────────────────────────────────────
+  window.handleSignUp = async function() {
+    const name     = document.getElementById('signup-name').value.trim();
+    const username = document.getElementById('signup-username').value.trim();
+    const email    = document.getElementById('signup-email').value.trim();
+    const password = document.getElementById('signup-password').value;
+    const confirm  = document.getElementById('signup-confirm').value;
+    const btn      = document.getElementById('signup-btn');
+    const errorEl  = document.getElementById('signup-error');
+    const errorMsg = document.getElementById('signup-error-msg');
+
+    errorEl.classList.remove('auth-error--show');
+
+    // Validation
+    if (!name || !username || !email || !password || !confirm) {
+      errorMsg.textContent = 'Please fill in all fields.';
+      errorEl.classList.add('auth-error--show');
+      return;
+    }
+    if (password.length < 8) {
+      errorMsg.textContent = 'Password must be at least 8 characters.';
+      errorEl.classList.add('auth-error--show');
+      return;
+    }
+    if (password !== confirm) {
+      errorMsg.textContent = 'Passwords do not match.';
+      errorEl.classList.add('auth-error--show');
+      // Shake confirm field
+      const field = document.getElementById('signup-confirm');
+      field.classList.add('input--error');
+      field.style.animation = 'shake 0.35s ease';
+      setTimeout(() => { field.style.animation = ''; field.classList.remove('input--error'); }, 400);
+      return;
+    }
+    if (!/^[a-z0-9_]{3,20}$/.test(username)) {
+      errorMsg.textContent = 'Username must be 3–20 chars (letters, numbers, underscores).';
+      errorEl.classList.add('auth-error--show');
+      return;
+    }
+
+    btn.classList.add('btn--loading');
+    btn.disabled = true;
+
+    const { error } = await signUp(email, password, {
+      display_name: name,
+      username,
+    });
+
+    btn.classList.remove('btn--loading');
+    btn.disabled = false;
+
+    if (error) {
+      errorMsg.textContent = error.message || 'Sign up failed. Try again.';
+      errorEl.classList.add('auth-error--show');
+    } else {
+      // Show success state
+      document.getElementById('signup-fields').style.display = 'none';
+      document.getElementById('signup-success').classList.add('auth-success--show');
+    }
+  };
+
+  // ── Enter key support ──────────────────────────────────────
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const signinVisible = !document.getElementById('form-signin').classList.contains('auth-form--hidden');
+    if (signinVisible) handleSignIn();
+    else handleSignUp();
+  });
+</script>
+
+<style>
+  /* Shake animation for errors */
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%       { transform: translateX(-6px); }
+    40%       { transform: translateX(6px); }
+    60%       { transform: translateX(-4px); }
+    80%       { transform: translateX(4px); }
+  }
+</style>
+
+</body>
+</html>
