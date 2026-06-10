@@ -1675,3 +1675,13 @@ img {
     transition-duration: 0.01ms !important;
   }
 }
+
+@media screen and (max-width: 600px) {
+  /* This tells your phone to follow these special rules */
+  .blog-card__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 15px;
+  }
+}
