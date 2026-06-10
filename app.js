@@ -1,8 +1,12 @@
 // ============================================================
-//  INKBLOT — app.js
+//  YOUBLOGS — app.js
 //  Shared Supabase client + auth + utilities
 //  Include this FIRST on every page via:
-//  <script src="app.js"></script>
+//  <script type="module" src="app.js"></script>
+//
+//  NOTE: No file uploads — all images are external URLs only.
+//        Cover images use Unsplash API or any direct image URL.
+//        Avatars use any direct image URL.
 // ============================================================
 
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
@@ -10,8 +14,8 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 // ────────────────────────────────────────────────────────────
 // CONFIG — replace with your Supabase project values
 // ────────────────────────────────────────────────────────────
-const SUPABASE_URL = 'https://fpiupnbqtpwefmctprtx.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwaXVwbmJxdHB3ZWZtY3RwcnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MjU3MjcsImV4cCI6MjA5NjUwMTcyN30.Zl6lDmovzVGgexcZzSMqZRvKl9H4wd7Hh1RO5QZ6Pkk';
+const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';
+const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -125,18 +129,17 @@ export async function updateProfile(updates) {
   return { data, error };
 }
 
-export async function uploadAvatar(file) {
+/**
+ * Set avatar from a URL (no file upload).
+ * Validates the URL loads as an image before saving.
+ */
+export async function setAvatarUrl(url) {
   const user = await getUser();
   if (!user) return { error: 'Not authenticated' };
-  const ext = file.name.split('.').pop();
-  const path = `${user.id}/avatar.${ext}`;
-  const { error: uploadError } = await supabase.storage
-    .from('avatars')
-    .upload(path, file, { upsert: true });
-  if (uploadError) return { error: uploadError };
-  const { data } = supabase.storage.from('avatars').getPublicUrl(path);
-  await updateProfile({ avatar_url: data.publicUrl });
-  return { url: data.publicUrl };
+  const valid = await validateImageUrl(url);
+  if (!valid) return { error: 'URL does not point to a valid image' };
+  const { data, error } = await updateProfile({ avatar_url: url });
+  return { data, error };
 }
 
 
@@ -641,48 +644,172 @@ export function navigate(path) {
   window.location.href = path;
 }
 
-/** Build a cover image URL from Supabase Storage */
-export function coverUrl(path) {
-  if (!path) return null;
-  if (path.startsWith('http')) return path;
-  const { data } = supabase.storage.from('covers').getPublicUrl(path);
-  return data.publicUrl;
+/**
+ * Returns a cover URL as-is (already an external URL — no storage).
+ * Kept for backwards compatibility in rendering code.
+ */
+export function coverUrl(url) {
+  return url || null;
 }
 
-/** Upload a cover image and return the public URL */
-export async function uploadCover(file, blogId) {
-  const ext = file.name.split('.').pop();
-  const path = `${blogId}/cover.${ext}`;
-  const { error } = await supabase.storage
-    .from('covers')
-    .upload(path, file, { upsert: true });
-  if (error) return { error };
-  const { data } = supabase.storage.from('covers').getPublicUrl(path);
-  return { url: data.publicUrl };
+/**
+ * Search Unsplash for free images.
+ * Returns array of { url, thumb, description, photographer, photographerUrl }
+ * Set your Unsplash Access Key below.
+ */
+const UNSPLASH_ACCESS_KEY = 'YOUR_UNSPLASH_ACCESS_KEY';
+
+export async function searchUnsplash(query, page = 1) {
+  if (!query.trim()) return { results: [], error: null };
+  try {
+    const res = await fetch(
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=20&page=${page}&orientation=landscape`,
+      { headers: { Authorization: `Client-ID ${UNSPLASH_ACCESS_KEY}` } }
+    );
+    if (!res.ok) throw new Error(`Unsplash error: ${res.status}`);
+    const json = await res.json();
+    const results = (json.results || []).map(p => ({
+      url:             p.urls.regular,          // full-size display URL
+      thumb:           p.urls.small,            // thumbnail for picker grid
+      raw:             p.urls.full,             // highest res (avoid unless needed)
+      description:     p.alt_description || p.description || '',
+      photographer:    p.user.name,
+      photographerUrl: p.user.links.html + '?utm_source=youblogs&utm_medium=referral',
+      unsplashUrl:     p.links.html + '?utm_source=youblogs&utm_medium=referral',
+    }));
+    return { results, total: json.total, error: null };
+  } catch (err) {
+    console.error('[YouBlogs] Unsplash search failed:', err);
+    return { results: [], error: err.message };
+  }
+}
+
+/**
+ * Trigger an Unsplash download event (required by their API terms
+ * whenever a photo is actually selected/used).
+ */
+export async function trackUnsplashDownload(photo) {
+  if (!photo?.downloadLocation) return;
+  try {
+    await fetch(
+      `https://api.unsplash.com/photos/${photo.id}/download`,
+      { headers: { Authorization: `Client-ID ${UNSPLASH_ACCESS_KEY}` } }
+    );
+  } catch (_) {}
+}
+
+/**
+ * Validate that a URL actually resolves to an image.
+ * Returns true/false. Uses a hidden <img> probe — works client-side only.
+ */
+export function validateImageUrl(url) {
+  return new Promise((resolve) => {
+    if (!url || !url.startsWith('https://')) { resolve(false); return; }
+    const img = new Image();
+    const timer = setTimeout(() => { img.src = ''; resolve(false); }, 6000);
+    img.onload  = () => { clearTimeout(timer); resolve(img.width > 0); };
+    img.onerror = () => { clearTimeout(timer); resolve(false); };
+    img.src = url;
+  });
+}
+
+/**
+ * Extract a YouTube video ID from any YouTube URL format.
+ * Supports: youtube.com/watch?v=, youtu.be/, youtube.com/shorts/
+ * Returns the video ID string or null.
+ */
+export function extractYouTubeId(url) {
+  if (!url) return null;
+  const patterns = [
+    /[?&]v=([a-zA-Z0-9_-]{11})/,           // youtube.com/watch?v=ID
+    /youtu\.be\/([a-zA-Z0-9_-]{11})/,       // youtu.be/ID
+    /\/shorts\/([a-zA-Z0-9_-]{11})/,        // youtube.com/shorts/ID
+    /\/embed\/([a-zA-Z0-9_-]{11})/,         // already an embed URL
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+/**
+ * Extract a Vimeo video ID from a Vimeo URL.
+ */
+export function extractVimeoId(url) {
+  if (!url) return null;
+  const match = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  return match ? match[1] : null;
+}
+
+/**
+ * Build a safe embeddable iframe URL from a video URL.
+ * Supports YouTube and Vimeo. Returns null for unrecognised URLs.
+ *
+ * @param {string} url - Raw video URL pasted by user
+ * @returns {{ embedUrl: string, type: 'youtube'|'vimeo'|null, id: string|null }}
+ */
+export function buildEmbedUrl(url) {
+  if (!url) return { embedUrl: null, type: null, id: null };
+
+  // YouTube
+  const ytId = extractYouTubeId(url);
+  if (ytId) {
+    return {
+      embedUrl: `https://www.youtube-nocookie.com/embed/${ytId}?rel=0&modestbranding=1`,
+      type: 'youtube',
+      id: ytId,
+    };
+  }
+
+  // Vimeo
+  const vmId = extractVimeoId(url);
+  if (vmId) {
+    return {
+      embedUrl: `https://player.vimeo.com/video/${vmId}?byline=0&portrait=0`,
+      type: 'vimeo',
+      id: vmId,
+    };
+  }
+
+  return { embedUrl: null, type: null, id: null };
+}
+
+/**
+ * Detect whether a URL is a video (YouTube / Vimeo) or image.
+ * Returns 'video', 'image', or 'unknown'.
+ */
+export function detectMediaType(url) {
+  if (!url) return 'unknown';
+  if (extractYouTubeId(url) || extractVimeoId(url)) return 'video';
+  if (/\.(jpe?g|png|gif|webp|avif|svg)(\?.*)?$/i.test(url)) return 'image';
+  if (url.includes('unsplash.com') || url.includes('pexels.com') ||
+      url.includes('images.') || url.includes('/photo/')) return 'image';
+  return 'unknown';
 }
 
 /** Global error handler for Supabase errors */
 export function handleError(error, fallback = 'Something went wrong') {
   if (!error) return;
-  console.error('[INKBLOT]', error);
+  console.error('[YouBlogs]', error);
   toast(error.message || fallback, 'error');
 }
 
 // ────────────────────────────────────────────────────────────
 // GLOBAL AUTH STATE LISTENER
-// Sets window.__inkblot_user and dispatches 'inkblot:authchange'
+// Sets window.__yb_user and dispatches 'youblogs:authchange'
 // ────────────────────────────────────────────────────────────
 supabase.auth.onAuthStateChange((event, session) => {
-  window.__inkblot_user = session?.user ?? null;
-  window.dispatchEvent(new CustomEvent('inkblot:authchange', {
-    detail: { event, user: window.__inkblot_user }
+  window.__yb_user = session?.user ?? null;
+  window.dispatchEvent(new CustomEvent('youblogs:authchange', {
+    detail: { event, user: window.__yb_user }
   }));
 });
 
 // Expose on window for non-module pages (optional convenience)
 window.IB = {
   supabase, getSession, getUser, getMyProfile, signUp, signIn, signOut,
-  requireAuth, redirectIfAuthed, getProfile, updateProfile, uploadAvatar,
+  requireAuth, redirectIfAuthed, getProfile, updateProfile, setAvatarUrl,
   getFeed, getFollowingFeed, getBlog, saveBlog, deleteBlog, publishBlog,
   searchBlogs, getUserBlogs, likeBlog, unlikeBlog, isLiked,
   getMyLikedIds, getMyBookmarkedIds, toggleBookmark, getMyBookmarks,
@@ -691,6 +818,8 @@ window.IB = {
   getNotifications, markAllNotificationsRead, getUnreadNotificationCount,
   subscribeToComments, subscribeToBlogLikes, subscribeToNotifications,
   subscribeToFeed, unsubscribe,
+  searchUnsplash, trackUnsplashDownload,
   slugify, formatCount, timeAgo, initials, debounce,
-  stripHtml, truncate, toast, navigate, coverUrl, uploadCover, handleError,
+  stripHtml, truncate, toast, navigate, coverUrl,
+  validateImageUrl, extractYouTubeId, buildEmbedUrl, handleError,
 };
