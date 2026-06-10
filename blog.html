@@ -394,6 +394,26 @@
       gap: var(--sp-2);
     }
 
+    /* ── Comment sign-in nudge ── */
+    #comment-input-row { display: none; } /* shown by JS when authed */
+
+    .comment-signin-nudge {
+      display: none;
+      align-items: center;
+      gap: var(--sp-3);
+      padding: var(--sp-3) var(--sp-4);
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .comment-signin-nudge__text {
+      flex: 1;
+      font-size: var(--text-sm);
+      color: var(--text-muted);
+    }
+
+    .comment-signin-nudge--visible { display: flex; }
+
     /* ── Share sheet ── */
     .share-options {
       display: grid;
@@ -680,6 +700,15 @@
         <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
       </svg>
     </button>
+  </div>
+
+  <!-- Sign-in nudge (shown when logged out) -->
+  <div class="comment-signin-nudge" id="comment-signin-nudge">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;color:var(--text-muted);flex-shrink:0">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+    <span class="comment-signin-nudge__text">Sign in to join the conversation</span>
+    <a href="auth.html" class="btn btn--primary btn--sm">Sign in</a>
   </div>
 </div>
 
@@ -1101,7 +1130,9 @@ window.openComments = async function() {
 
   // Show/hide input row based on auth
   const inputRow = document.getElementById('comment-input-row');
+  const nudge    = document.getElementById('comment-signin-nudge');
   if (inputRow) inputRow.style.display = currentUser ? 'flex' : 'none';
+  if (nudge)    nudge.classList.toggle('comment-signin-nudge--visible', !currentUser);
 
   // Ensure listener is attached (failsafe)
   if (!commentListenerAttached) setupCommentInput();
