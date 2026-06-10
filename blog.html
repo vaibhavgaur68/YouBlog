@@ -4,9 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>YouBlogs — Read</title>
-  <meta name="description" content="Read in-depth articles and stories on YouBlogs. Discover ideas, opinions, and experiences written by real people." />
-  <meta name="robots" content="index, follow" />
-  <link rel="canonical" href="https://youblogs.pages.dev/blog.html" />
   <link rel="stylesheet" href="style.css" />
   <style>
 
@@ -267,23 +264,29 @@
 
     /* ── Floating action bar ── */
     .fab-bar {
-      position: sticky;
+      position: fixed;
       bottom: calc(var(--bottom-nav-h) + var(--safe-bottom) + var(--sp-3));
+      left: 50%;
+      transform: translateX(-50%);
       display: flex;
       align-items: center;
       gap: 2px;
-      background: rgba(26,26,30,0.94);
+      background: rgba(26,26,30,0.96);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border: 1px solid var(--border);
       border-radius: var(--r-full);
       padding: 5px 8px;
-      margin: 0 auto var(--sp-4);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
       width: fit-content;
-      z-index: 50;
+      z-index: 90;
       animation: fadeUp 0.4s var(--t-spring) both;
       animation-delay: 0.3s;
+    }
+
+    /* Extra bottom padding so content isn't hidden behind the fixed fab-bar */
+    #article-view {
+      padding-bottom: calc(var(--bottom-nav-h) + var(--safe-bottom) + 72px);
     }
 
     .fab-action {
@@ -774,7 +777,7 @@
 
 <script type="module">
 import {
-  getUser, getBlog, getUserBlogs,
+  getUser, getMyProfile, getBlog, getUserBlogs,
   likeBlog, unlikeBlog, isLiked,
   toggleBookmark, getMyBookmarkedIds,
   followUser, unfollowUser, isFollowing,
@@ -785,16 +788,18 @@ import {
 } from './app.js';
 
 // ── State ────────────────────────────────────────────────────
-let blog           = null;
-let currentUser    = null;
-let liked          = false;
-let bookmarked     = false;
-let following      = false;
-let comments       = [];
-let replyingTo     = null;   // comment id being replied to
-let commentsLoaded = false;
-let commentChannel = null;
-let likeChannel    = null;
+let blog             = null;
+let currentUser      = null;
+let myProfile        = null;   // cached own profile for avatar in comments
+let liked            = false;
+let bookmarked       = false;
+let following        = false;
+let comments         = [];
+let replyingTo       = null;   // comment id being replied to
+let commentsLoaded   = false;
+let commentChannel   = null;
+let likeChannel      = null;
+let commentListenerAttached = false; // prevent stacking input listeners
 
 // ── Init ─────────────────────────────────────────────────────
 async function init() {
@@ -823,15 +828,42 @@ async function init() {
 
   blog = data;
   renderBlog();
+
+  // Pre-load own profile for comment avatar (non-blocking)
+  if (currentUser) {
+    getMyProfile().then(p => {
+      myProfile = p;
+      // Update commenter avatar if already visible
+      const av = document.getElementById('commenter-avatar');
+      if (av && p) {
+        av.innerHTML = p.avatar_url
+          ? `<img src="${p.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`
+          : `<span>${initials(p.display_name || 'U')}</span>`;
+      }
+    });
+  }
+
   await Promise.all([
     loadSocialState(),
     loadMorePosts(),
   ]);
   setupRealtime();
   setupScrollBehavior();
+  setupCommentInput(); // Attach input listener ONCE at init
 
   // Auto-open comments if #comments in URL
   if (location.hash === '#comments') openComments();
+}
+
+// ── Set up comment input listener once ───────────────────────
+function setupCommentInput() {
+  const input   = document.getElementById('comment-input');
+  const sendBtn = document.getElementById('send-btn');
+  if (!input || !sendBtn) return;
+  input.addEventListener('input', () => {
+    sendBtn.disabled = !input.value.trim();
+  });
+  commentListenerAttached = true;
 }
 
 // ── Render blog ───────────────────────────────────────────────
@@ -1054,22 +1086,22 @@ window.openComments = async function() {
   document.getElementById('comments-sheet').classList.add('bottom-sheet--open');
   document.body.style.overflow = 'hidden';
 
-  // Commenter avatar
-  if (currentUser) {
-    const { getMyProfile } = await import('./app.js');
-    const profile = await getMyProfile();
+  // Update commenter avatar from cached myProfile (no dynamic import needed)
+  if (currentUser && myProfile) {
     const av = document.getElementById('commenter-avatar');
-    av.innerHTML = profile?.avatar_url
-      ? `<img src="${profile.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`
-      : `<span>${initials(profile?.display_name || 'U')}</span>`;
+    if (av) {
+      av.innerHTML = myProfile.avatar_url
+        ? `<img src="${myProfile.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`
+        : `<span>${initials(myProfile.display_name || 'U')}</span>`;
+    }
   }
 
-  // Enable send btn on input
-  const input   = document.getElementById('comment-input');
-  const sendBtn = document.getElementById('send-btn');
-  input.addEventListener('input', () => {
-    sendBtn.disabled = !input.value.trim();
-  });
+  // Show/hide input row based on auth
+  const inputRow = document.getElementById('comment-input-row');
+  if (inputRow) inputRow.style.display = currentUser ? 'flex' : 'none';
+
+  // Ensure listener is attached (failsafe)
+  if (!commentListenerAttached) setupCommentInput();
 
   if (!commentsLoaded) await loadComments();
 };
@@ -1168,23 +1200,42 @@ function createCommentEl(c, isReply = false) {
 // ── Submit comment ────────────────────────────────────────────
 window.submitComment = async function() {
   if (!currentUser) { toast('Sign in to comment'); navigate('/auth.html'); return; }
-  const input = document.getElementById('comment-input');
-  const text  = input.value.trim();
+  const input   = document.getElementById('comment-input');
+  const sendBtn = document.getElementById('send-btn');
+  const text    = input.value.trim();
   if (!text) return;
 
-  input.value   = '';
+  // Optimistic UI — clear input and disable btn
+  const savedText  = text;
+  input.value      = '';
   input.style.height = '';
-  document.getElementById('send-btn').disabled = true;
+  sendBtn.disabled = true;
 
-  const { data, error } = await postComment(blog.id, text, null);
-  if (error) { toast('Could not post comment', 'error'); return; }
+  const { data, error } = await postComment(blog.id, savedText, null);
+
+  if (error) {
+    // Restore input on error
+    input.value = savedText;
+    sendBtn.disabled = false;
+    toast('Could not post comment', 'error');
+    return;
+  }
+
+  // Inject the current user's profile data if the join didn't return it
+  if (data && !data.profiles && myProfile) {
+    data.profiles = {
+      id:           currentUser.id,
+      username:     myProfile.username,
+      display_name: myProfile.display_name,
+      avatar_url:   myProfile.avatar_url,
+    };
+  }
 
   const list = document.getElementById('comments-list');
-  // Remove empty state if present
   list.querySelector('.empty-state')?.remove();
   list.appendChild(createCommentEl(data));
   updateCommentCount('+1');
-  list.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  list.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 };
 
 window.handleCommentKey = function(e) {
@@ -1213,12 +1264,23 @@ window.submitReply = async function(parentId) {
   const text     = textarea.value.trim();
   if (!text) return;
 
-  textarea.value = '';
+  const savedText    = text;
+  textarea.value     = '';
   box.classList.remove('reply-box--open');
   replyingTo = null;
 
-  const { data, error } = await postComment(blog.id, text, parentId);
-  if (error) { toast('Could not post reply', 'error'); return; }
+  const { data, error } = await postComment(blog.id, savedText, parentId);
+  if (error) { toast('Could not post reply', 'error'); textarea.value = savedText; return; }
+
+  // Inject profile data if join didn't return it
+  if (data && !data.profiles && myProfile) {
+    data.profiles = {
+      id:           currentUser.id,
+      username:     myProfile.username,
+      display_name: myProfile.display_name,
+      avatar_url:   myProfile.avatar_url,
+    };
+  }
 
   const repliesContainer = document.getElementById(`replies-${parentId}`);
   repliesContainer.appendChild(createCommentEl(data, true));

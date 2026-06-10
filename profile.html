@@ -802,6 +802,7 @@ import {
   signOut, supabase,
   formatCount, timeAgo, initials, toast, navigate
 } from './app.js';
+// supabase is imported directly above for raw queries in loadPosts
 
 // ── State ────────────────────────────────────────────────────
 let profile       = null;
@@ -939,19 +940,26 @@ async function loadPosts(tab) {
 
   let posts;
   if (isDrafts) {
-    if (draftsCache) { posts = draftsCache; }
-    else {
-      const { data } = await getUserBlogs(profile.id, { drafts: true });
-      draftsCache = (data || []).filter(b => b.status === 'draft');
-      posts = draftsCache;
-    }
+    // Always re-fetch drafts fresh (no stale cache issue)
+    const { data, error } = await supabase
+      .from('blogs')
+      .select('*')
+      .eq('author_id', profile.id)
+      .eq('status', 'draft')
+      .order('updated_at', { ascending: false });
+    if (error) console.error('[YouBlogs] drafts error:', error);
+    draftsCache = data || [];
+    posts = draftsCache;
   } else {
-    if (postsCache) { posts = postsCache; }
-    else {
-      const { data } = await getUserBlogs(profile.id, { drafts: false });
-      postsCache = data || [];
-      posts = postsCache;
-    }
+    // Use blog_feed view — has all joined author data and correct status filter
+    const { data, error } = await supabase
+      .from('blog_feed')
+      .select('*')
+      .eq('author_id', profile.id)
+      .order('published_at', { ascending: false });
+    if (error) console.error('[YouBlogs] posts error:', error);
+    postsCache = data || [];
+    posts = postsCache;
   }
 
   container.innerHTML = '';
@@ -1098,7 +1106,8 @@ function createListCard(post, isDraft) {
 
 // ── View mode toggle ──────────────────────────────────────────
 window.setViewMode = function(mode) {
-  viewMode = mode;
+  if (viewMode === mode) return;
+  viewMode    = mode;
   postsCache  = null;
   draftsCache = null;
   loadPosts(activeTab);
@@ -1106,12 +1115,13 @@ window.setViewMode = function(mode) {
 
 // ── Tab switching ─────────────────────────────────────────────
 window.switchProfileTab = function(tab) {
-  activeTab = tab;
+  if (activeTab === tab) return; // prevent double-load
+  activeTab   = tab;
+  postsCache  = null;
+  draftsCache = null;
   ['posts','drafts'].forEach(t => {
     document.getElementById(`ptab-${t}`)?.classList.toggle('profile-tab--active', t === tab);
   });
-  postsCache  = null;
-  draftsCache = null;
   loadPosts(tab);
 };
 

@@ -1135,7 +1135,7 @@ import {
   requireAuth, saveBlog, publishBlog,
   searchUnsplash, trackUnsplashDownload,
   validateImageUrl, buildEmbedUrl, detectMediaType,
-  debounce, toast, navigate
+  supabase, debounce, toast, navigate
 } from './app.js';
 
 // ── State ────────────────────────────────────────────────────
@@ -1163,9 +1163,62 @@ async function init() {
   if (editId) {
     blogId = editId;
     document.getElementById('nav-title').textContent = 'Edit post';
+    await loadExistingBlog(editId);
+  } else {
+    document.getElementById('editor-content').focus();
+  }
+}
+
+// ── Load existing blog into editor (edit mode) ────────────────
+async function loadExistingBlog(id) {
+  // Show loading state
+  setStatus('saving');
+  document.getElementById('status-text').textContent = 'Loading…';
+
+  const { data, error } = await supabase
+    .from('blogs')
+    .select('*')
+    .eq('id', id)
+    .eq('author_id', currentUser.id)   // security: only own posts
+    .single();
+
+  if (error || !data) {
+    toast('Could not load post for editing', 'error');
+    navigate('index.html');
+    return;
   }
 
-  document.getElementById('editor-content').focus();
+  // ── Populate title ────────────────────────────────────────
+  const titleInput = titleEl();
+  titleInput.value = data.title || '';
+  autoResize(titleInput);
+  onTitleInput();
+
+  // ── Populate subtitle ─────────────────────────────────────
+  const subtitleInput = subtitleEl();
+  subtitleInput.value = data.subtitle || '';
+  autoResize(subtitleInput);
+
+  // ── Populate content ──────────────────────────────────────
+  contentEl().innerHTML = data.content || '';
+  updateWordCount();
+
+  // ── Populate tags ─────────────────────────────────────────
+  tags = Array.isArray(data.tags) ? data.tags : [];
+  renderTagPills();
+
+  // ── Populate cover ────────────────────────────────────────
+  if (data.cover_url) {
+    coverUrl = data.cover_url;
+    coverAttribution = null; // existing covers don't have attribution stored
+    setCover(data.cover_url, null);
+  }
+
+  // ── Set savedVersion so dirty check works correctly ───────
+  savedVersion = getSnapshot();
+  setStatus('saved');
+
+  titleInput.focus();
 }
 
 // ── Dirty check ───────────────────────────────────────────────
