@@ -266,8 +266,10 @@
     .fab-bar {
       position: fixed;
       bottom: calc(var(--bottom-nav-h) + var(--safe-bottom) + var(--sp-3));
-      left: 50%;
-      transform: translateX(-50%);
+      left: 0;
+      right: 0;
+      margin-left: auto;
+      margin-right: auto;
       display: flex;
       align-items: center;
       gap: 2px;
@@ -279,6 +281,7 @@
       padding: 5px 8px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.6);
       width: fit-content;
+      max-width: calc(100% - 32px);
       z-index: 90;
       animation: fadeUp 0.4s var(--t-spring) both;
       animation-delay: 0.3s;
@@ -304,17 +307,7 @@
       font-family: var(--font-body);
       transition: background var(--t-fast), color var(--t-fast), transform var(--t-spring);
       white-space: nowrap;
-      width: fit-content;
-max-width: calc(100% - 32px);
-
-  }
-    @media (max-width: 380px) {
-  .fab-action {
-    padding: 7px 6px;
-    font-size: 10px;
-  }
-}
-
+    }
 
     .fab-action svg { width: 18px; height: 18px; flex-shrink: 0; }
     .fab-action:active { transform: scale(0.9); }
