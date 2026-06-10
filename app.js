@@ -14,8 +14,8 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 // ────────────────────────────────────────────────────────────
 // CONFIG — replace with your Supabase project values
 // ────────────────────────────────────────────────────────────
-const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';
-const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
+const SUPABASE_URL = 'https://fpiupnbqtpwefmctprtx.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwaXVwbmJxdHB3ZWZtY3RwcnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MjU3MjcsImV4cCI6MjA5NjUwMTcyN30.Zl6lDmovzVGgexcZzSMqZRvKl9H4wd7Hh1RO5QZ6Pkk';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -657,7 +657,7 @@ export function coverUrl(url) {
  * Returns array of { url, thumb, description, photographer, photographerUrl }
  * Set your Unsplash Access Key below.
  */
-const UNSPLASH_ACCESS_KEY = 'YOUR_UNSPLASH_ACCESS_KEY';
+const UNSPLASH_ACCESS_KEY = 'Nq48ispSrd5LtiOyIWq6K1YKyFrBujkB5g9hFnqmypk';
 
 export async function searchUnsplash(query, page = 1) {
   if (!query.trim()) return { results: [], error: null };
