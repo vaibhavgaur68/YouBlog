@@ -304,7 +304,17 @@
       font-family: var(--font-body);
       transition: background var(--t-fast), color var(--t-fast), transform var(--t-spring);
       white-space: nowrap;
-    }
+      width: fit-content;
+max-width: calc(100% - 32px);
+
+  }
+    @media (max-width: 380px) {
+  .fab-action {
+    padding: 7px 6px;
+    font-size: 10px;
+  }
+}
+
 
     .fab-action svg { width: 18px; height: 18px; flex-shrink: 0; }
     .fab-action:active { transform: scale(0.9); }
