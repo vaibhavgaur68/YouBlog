@@ -74,15 +74,9 @@
       transform: translateY(-100%);
     }
 
-    /* Smoothly remove top padding when header slides away */
+    /* Page padding is set by JS via ResizeObserver — no hardcode here */
     .page {
       transition: padding-top 0.28s cubic-bezier(0.4,0,0.2,1);
-      /* Override global padding-top: header-group height = nav(60) + tabs(44) + tag-strip(44) */
-      padding-top: 148px !important;
-    }
-
-    body.header-hidden .page {
-      padding-top: 0 !important;
     }
 
     /* Also hide bottom nav on scroll down */
@@ -928,20 +922,36 @@ window.addEventListener('pagehide', () => {
   const headerGroup = document.getElementById('header-group');
   const bottomNav   = document.querySelector('.bottom-nav');
   const page        = document.getElementById('page');
-  const HIDE_AFTER  = 80;   // px scrolled before hiding kicks in
-  const SHOW_DELTA  = 24;   // px scrolled up to re-show
+  const HIDE_AFTER  = 80;
+  const SHOW_DELTA  = 24;
 
-  let lastY   = 0;
-  let ticking = false;
+  let lastY       = 0;
+  let ticking     = false;
+  let headerHeight = 0;
+  let isHidden    = false;
 
-  // Measure actual header height and keep page padding in sync
-  function syncPadding(hidden) {
-    if (hidden) {
-      page.style.paddingTop = '0px';
-    } else {
-      const h = headerGroup.getBoundingClientRect().height;
-      page.style.paddingTop = h + 'px';
+  // Always measure the real height and apply it
+  function applyPadding() {
+    headerHeight = headerGroup.offsetHeight;
+    if (!isHidden) {
+      page.style.paddingTop = headerHeight + 'px';
     }
+  }
+
+  function showHeader() {
+    if (!isHidden) return;
+    isHidden = false;
+    headerGroup.classList.remove('header-group--hidden');
+    if (bottomNav) bottomNav.classList.remove('bottom-nav--hidden');
+    page.style.paddingTop = headerHeight + 'px';
+  }
+
+  function hideHeader() {
+    if (isHidden) return;
+    isHidden = true;
+    headerGroup.classList.add('header-group--hidden');
+    if (bottomNav) bottomNav.classList.add('bottom-nav--hidden');
+    page.style.paddingTop = '0px';
   }
 
   window.addEventListener('scroll', () => {
@@ -949,34 +959,29 @@ window.addEventListener('pagehide', () => {
     ticking = true;
     requestAnimationFrame(() => {
       const y = window.scrollY;
-      if (y > HIDE_AFTER) {
-        if (y > lastY) {
-          // scrolling DOWN — hide
-          headerGroup.classList.add('header-group--hidden');
-          if (bottomNav) bottomNav.classList.add('bottom-nav--hidden');
-          document.body.classList.add('header-hidden');
-          syncPadding(true);
-        } else if (lastY - y > SHOW_DELTA) {
-          // scrolling UP — reveal
-          headerGroup.classList.remove('header-group--hidden');
-          if (bottomNav) bottomNav.classList.remove('bottom-nav--hidden');
-          document.body.classList.remove('header-hidden');
-          syncPadding(false);
-        }
-      } else {
-        // near top — always show
-        headerGroup.classList.remove('header-group--hidden');
-        if (bottomNav) bottomNav.classList.remove('bottom-nav--hidden');
-        document.body.classList.remove('header-hidden');
-        syncPadding(false);
+      if (y <= HIDE_AFTER) {
+        showHeader();
+      } else if (y > lastY) {
+        hideHeader();         // scrolling down
+      } else if (lastY - y > SHOW_DELTA) {
+        showHeader();         // scrolling up enough
       }
       lastY = y;
       ticking = false;
     });
   }, { passive: true });
 
-  // Set initial padding once DOM is ready
-  requestAnimationFrame(() => syncPadding(false));
+  // Use ResizeObserver to always have the correct header height
+  // (handles tag-strip show/hide, font load, etc.)
+  const ro = new ResizeObserver(() => applyPadding());
+  ro.observe(headerGroup);
+
+  // Also set padding immediately after page paint
+  if (document.readyState === 'complete') {
+    applyPadding();
+  } else {
+    window.addEventListener('load', applyPadding);
+  }
 })();
 
 // ── Trending button handler ────────────────────────────────────
