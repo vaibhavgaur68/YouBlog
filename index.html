@@ -15,7 +15,7 @@
     /* New posts pill that appears on realtime update */
     .new-posts-pill {
       position: fixed;
-      top: calc(var(--nav-h) + 56px);
+      top: 160px; /* below full header-group (nav+tabs+tags ~148px + 12px gap) */
       left: 50%;
       transform: translateX(-50%) translateY(-12px);
       background: var(--amber);
@@ -55,12 +55,43 @@
       border-bottom: 1px solid var(--border);
       background: rgba(10,10,11,0.92);
       backdrop-filter: blur(16px);
-      position: sticky;
-      top: calc(var(--nav-h) + 44px); /* below tabs */
-      z-index: 9;
     }
 
     .tag-strip::-webkit-scrollbar { display: none; }
+
+    /* ── YouTube-style header hide on scroll ── */
+    .header-group {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+      will-change: transform;
+    }
+
+    .header-group--hidden {
+      transform: translateY(-100%);
+    }
+
+    /* Smoothly remove top padding when header slides away */
+    .page {
+      transition: padding-top 0.28s cubic-bezier(0.4,0,0.2,1);
+      /* Override global padding-top: header-group height = nav(60) + tabs(44) + tag-strip(44) */
+      padding-top: 148px !important;
+    }
+
+    body.header-hidden .page {
+      padding-top: 0 !important;
+    }
+
+    /* Also hide bottom nav on scroll down */
+    .bottom-nav {
+      transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+    }
+    .bottom-nav--hidden {
+      transform: translateY(100%);
+    }
 
     /* ── End of feed message ── */
     .feed-end {
@@ -220,8 +251,10 @@
 <body>
 
 <!-- ══════════════════════════════════════════════════════════
-     TOP NAV
+     HEADER GROUP (top-nav + tabs + tag-strip — hides together on scroll)
 ══════════════════════════════════════════════════════════ -->
+<div class="header-group" id="header-group">
+
 <nav class="top-nav">
   <div class="top-nav__wordmark">YouBlogs</div>
   <div class="top-nav__actions">
@@ -241,13 +274,8 @@
   </div>
 </nav>
 
-<!-- ══════════════════════════════════════════════════════════
-     MAIN PAGE
-══════════════════════════════════════════════════════════ -->
-<div class="page" id="page">
-
-  <!-- Feed tabs -->
-  <div class="tabs" id="feed-tabs" style="top:var(--nav-h)">
+  <!-- Feed tabs (inside header-group so they hide together on scroll) -->
+  <div class="tabs" id="feed-tabs">
     <button class="tab tab--active" id="tab-foryou" onclick="switchFeed('foryou')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
@@ -280,6 +308,13 @@
     <button class="tag" data-tag="travel"      onclick="filterByTag(this, 'travel')">Travel</button>
     <button class="tag" data-tag="food"        onclick="filterByTag(this, 'food')">Food</button>
   </div>
+
+</div><!-- /.header-group -->
+
+<!-- ══════════════════════════════════════════════════════════
+     MAIN PAGE
+══════════════════════════════════════════════════════════ -->
+<div class="page" id="page">
 
   <!-- ── Feed container ── -->
   <div class="feed" id="feed">
@@ -386,7 +421,7 @@
       </svg>
     </a>
     <!-- Trending -->
-    <button class="bottom-nav__item" aria-label="Trending" onclick="switchFeed('foryou'); filterByTag(document.querySelector('.tag-strip .tag'), '');">
+    <button class="bottom-nav__item" aria-label="Trending" onclick="goTrending()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
       </svg>
@@ -887,6 +922,72 @@ window.addEventListener('pagehide', () => {
   unsubscribe(feedChannel);
   unsubscribe(notifChannel);
 });
+
+// ── Scroll-hide header (YouTube-style) ────────────────────────
+(function setupScrollHide() {
+  const headerGroup = document.getElementById('header-group');
+  const bottomNav   = document.querySelector('.bottom-nav');
+  const page        = document.getElementById('page');
+  const HIDE_AFTER  = 80;   // px scrolled before hiding kicks in
+  const SHOW_DELTA  = 24;   // px scrolled up to re-show
+
+  let lastY   = 0;
+  let ticking = false;
+
+  // Measure actual header height and keep page padding in sync
+  function syncPadding(hidden) {
+    if (hidden) {
+      page.style.paddingTop = '0px';
+    } else {
+      const h = headerGroup.getBoundingClientRect().height;
+      page.style.paddingTop = h + 'px';
+    }
+  }
+
+  window.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      const y = window.scrollY;
+      if (y > HIDE_AFTER) {
+        if (y > lastY) {
+          // scrolling DOWN — hide
+          headerGroup.classList.add('header-group--hidden');
+          if (bottomNav) bottomNav.classList.add('bottom-nav--hidden');
+          document.body.classList.add('header-hidden');
+          syncPadding(true);
+        } else if (lastY - y > SHOW_DELTA) {
+          // scrolling UP — reveal
+          headerGroup.classList.remove('header-group--hidden');
+          if (bottomNav) bottomNav.classList.remove('bottom-nav--hidden');
+          document.body.classList.remove('header-hidden');
+          syncPadding(false);
+        }
+      } else {
+        // near top — always show
+        headerGroup.classList.remove('header-group--hidden');
+        if (bottomNav) bottomNav.classList.remove('bottom-nav--hidden');
+        document.body.classList.remove('header-hidden');
+        syncPadding(false);
+      }
+      lastY = y;
+      ticking = false;
+    });
+  }, { passive: true });
+
+  // Set initial padding once DOM is ready
+  requestAnimationFrame(() => syncPadding(false));
+})();
+
+// ── Trending button handler ────────────────────────────────────
+window.goTrending = function() {
+  // Switch to For You tab and reset to "All" tags
+  if (currentFeed !== 'foryou') switchFeed('foryou');
+  const allBtn = document.querySelector('.tag-strip .tag[data-tag=""]');
+  if (allBtn) filterByTag(allBtn, '');
+  // Scroll to top smoothly
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 
 init();
 </script>
