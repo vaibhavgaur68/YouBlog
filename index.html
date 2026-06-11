@@ -203,6 +203,19 @@
     .feed .blog-card:nth-child(5) { animation-delay: 160ms; }
     .feed .blog-card:nth-child(n+6) { animation-delay: 200ms; }
   </style>
+  <!-- Page transition: prevents FOUC flash between pages -->
+  <script>
+    document.documentElement.classList.add("ready");
+    document.addEventListener("click", function(e) {
+      var a = e.target.closest("a[href]");
+      if (!a) return;
+      var href = a.getAttribute("href");
+      if (!href || href.startsWith("#") || href.startsWith("javascript") || href.startsWith("http") || a.target === "_blank") return;
+      e.preventDefault();
+      document.body.classList.add("page-leaving");
+      setTimeout(function() { window.location.href = href; }, 120);
+    });
+  </script>
 </head>
 <body>
 
@@ -372,12 +385,12 @@
         <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
       </svg>
     </a>
-    <!-- Explore -->
-    <a href="explore.html" class="bottom-nav__item" aria-label="Explore">
+    <!-- Trending -->
+    <button class="bottom-nav__item" aria-label="Trending" onclick="switchFeed('foryou'); filterByTag(document.querySelector('.tag-strip .tag'), '');">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
       </svg>
-    </a>
+    </button>
     <!-- Write FAB -->
     <a href="write.html" class="bottom-nav__item" aria-label="Write">
       <div class="bottom-nav__fab">

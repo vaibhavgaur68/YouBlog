@@ -1668,6 +1668,29 @@ img {
 }
 .scale-in { animation: scaleIn 0.2s var(--t-spring) both; }
 
+/* ────────────────────────────────────────────────────────────
+   26. PAGE TRANSITION (prevents flash/FOUC between pages)
+   ──────────────────────────────────────────────────────────── */
+html {
+  /* Prevents the raw HTML from showing before CSS loads */
+  visibility: hidden;
+}
+
+html.ready {
+  visibility: visible;
+}
+
+/* Fade-in on load */
+@keyframes pageEnter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+body {
+  animation: pageEnter 0.18s ease-out both;
+}
+
+/* Fade-out on navigate-away */
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -1676,12 +1699,4 @@ img {
   }
 }
 
-@media screen and (max-width: 600px) {
-  /* This tells your phone to follow these special rules */
-  .blog-card__footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: 15px;
-  }
-}
+

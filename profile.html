@@ -481,6 +481,19 @@
       animation: spin 0.7s linear infinite;
     }
   </style>
+  <!-- Page transition: prevents FOUC flash between pages -->
+  <script>
+    document.documentElement.classList.add("ready");
+    document.addEventListener("click", function(e) {
+      var a = e.target.closest("a[href]");
+      if (!a) return;
+      var href = a.getAttribute("href");
+      if (!href || href.startsWith("#") || href.startsWith("javascript") || href.startsWith("http") || a.target === "_blank") return;
+      e.preventDefault();
+      document.body.classList.add("page-leaving");
+      setTimeout(function() { window.location.href = href; }, 120);
+    });
+  </script>
 </head>
 <body>
 

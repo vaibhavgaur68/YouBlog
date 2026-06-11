@@ -285,6 +285,12 @@
       z-index: 90;
       animation: fadeUp 0.4s var(--t-spring) both;
       animation-delay: 0.3s;
+      transition: bottom 0.28s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    /* Fab rises up when bottom nav is hidden */
+    body.nav-hidden .fab-bar {
+      bottom: calc(var(--safe-bottom) + 20px);
     }
 
     /* Extra bottom padding so content isn't hidden behind the fixed fab-bar */
@@ -488,7 +494,40 @@
       padding-top: calc(var(--nav-h) + var(--sp-4));
     }
 
-    /* ── Delete confirm ── */
+    /* ── Header auto-hide on scroll (YouTube-style) ── */
+    .read-nav {
+      transition: background var(--t-base), border-color var(--t-base),
+                  backdrop-filter var(--t-base), transform 0.28s cubic-bezier(0.4,0,0.2,1),
+                  opacity 0.28s ease;
+    }
+
+    .read-nav--hidden {
+      transform: translateY(-100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* Bottom nav also hides on scroll for maximum reading space */
+    .bottom-nav {
+      transition: transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease;
+    }
+
+    .bottom-nav--hidden {
+      transform: translateY(100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* Give the fab-bar extra bottom margin when bottom nav is hidden so it doesn't stick to the edge */
+    .bottom-nav--hidden ~ .fab-bar,
+    body.nav-hidden .fab-bar {
+      bottom: calc(var(--safe-bottom) + var(--sp-4));
+    }
+
+    /* Padding for fab-bar when bottom nav is hidden */
+    body.nav-hidden #article-view {
+      padding-bottom: calc(var(--safe-bottom) + 80px);
+    }
     .danger-zone {
       padding: var(--sp-4);
       border-top: 1px solid var(--border);
@@ -506,6 +545,19 @@
       letter-spacing: 0.06em;
     }
   </style>
+  <!-- Page transition: prevents FOUC flash between pages -->
+  <script>
+    document.documentElement.classList.add("ready");
+    document.addEventListener("click", function(e) {
+      var a = e.target.closest("a[href]");
+      if (!a) return;
+      var href = a.getAttribute("href");
+      if (!href || href.startsWith("#") || href.startsWith("javascript") || href.startsWith("http") || a.target === "_blank") return;
+      e.preventDefault();
+      document.body.classList.add("page-leaving");
+      setTimeout(function() { window.location.href = href; }, 120);
+    });
+  </script>
 </head>
 <body>
 
@@ -1385,16 +1437,54 @@ function setupRealtime() {
 
 // ── Scroll behaviour ──────────────────────────────────────────
 function setupScrollBehavior() {
-  const nav      = document.getElementById('read-nav');
-  const progress = document.getElementById('read-progress');
-  const article  = document.getElementById('article-view');
+  const nav        = document.getElementById('read-nav');
+  const bottomNav  = document.querySelector('.bottom-nav');
+  const fabBar     = document.getElementById('fab-bar');
+  const progress   = document.getElementById('read-progress');
+
+  let lastScrollY  = 0;
+  let ticking      = false;
+  const HIDE_THRESHOLD = 80;   // start hiding after scrolling 80px down
+  const SHOW_DELTA     = 20;   // show again after scrolling 20px up
 
   window.addEventListener('scroll', () => {
-    const scrollY  = window.scrollY;
-    const docH     = document.documentElement.scrollHeight - window.innerHeight;
-    const pct      = docH > 0 ? (scrollY / docH) * 100 : 0;
-    progress.style.width = pct + '%';
-    nav.classList.toggle('read-nav--scrolled', scrollY > 60);
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        const scrollY = window.scrollY;
+        const docH    = document.documentElement.scrollHeight - window.innerHeight;
+        const pct     = docH > 0 ? (scrollY / docH) * 100 : 0;
+
+        // Reading progress bar
+        progress.style.width = pct + '%';
+
+        // Scrolled-state for nav background
+        nav.classList.toggle('read-nav--scrolled', scrollY > 60);
+
+        // Hide / show nav & bottom bar
+        if (scrollY > HIDE_THRESHOLD) {
+          if (scrollY > lastScrollY) {
+            // Scrolling DOWN — hide both bars
+            nav.classList.add('read-nav--hidden');
+            if (bottomNav) bottomNav.classList.add('bottom-nav--hidden');
+            document.body.classList.add('nav-hidden');
+          } else if (lastScrollY - scrollY > SHOW_DELTA) {
+            // Scrolling UP enough — reveal both bars
+            nav.classList.remove('read-nav--hidden');
+            if (bottomNav) bottomNav.classList.remove('bottom-nav--hidden');
+            document.body.classList.remove('nav-hidden');
+          }
+        } else {
+          // Near top — always show
+          nav.classList.remove('read-nav--hidden');
+          if (bottomNav) bottomNav.classList.remove('bottom-nav--hidden');
+          document.body.classList.remove('nav-hidden');
+        }
+
+        lastScrollY = scrollY;
+        ticking = false;
+      });
+      ticking = true;
+    }
   }, { passive: true });
 }
 
