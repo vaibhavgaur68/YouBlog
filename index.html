@@ -59,29 +59,23 @@
 
     .tag-strip::-webkit-scrollbar { display: none; }
 
-    /* ── YouTube-style header hide on scroll ── */
+    /* Override global .page padding — JS sets the correct value via setPadding() */
+    #page { padding-top: 0 !important; }
+
+
+    /* ── Header hides on scroll-down, reappears on scroll-up ── */
     .header-group {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
+      top: 0; left: 0; right: 0;
       z-index: 100;
-      transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
-      will-change: transform;
+      transform: translateY(0);
+      transition: transform 0.25s ease;
     }
-
     .header-group--hidden {
       transform: translateY(-100%);
     }
-
-    /* Page padding is set by JS via ResizeObserver — no hardcode here */
-    .page {
-      transition: padding-top 0.28s cubic-bezier(0.4,0,0.2,1);
-    }
-
-    /* Also hide bottom nav on scroll down */
     .bottom-nav {
-      transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+      transition: transform 0.25s ease;
     }
     .bottom-nav--hidden {
       transform: translateY(100%);
@@ -917,72 +911,7 @@ window.addEventListener('pagehide', () => {
   unsubscribe(notifChannel);
 });
 
-// ── Scroll-hide header (YouTube-style) ────────────────────────
-(function setupScrollHide() {
-  const headerGroup = document.getElementById('header-group');
-  const bottomNav   = document.querySelector('.bottom-nav');
-  const page        = document.getElementById('page');
-  const HIDE_AFTER  = 80;
-  const SHOW_DELTA  = 24;
 
-  let lastY       = 0;
-  let ticking     = false;
-  let headerHeight = 0;
-  let isHidden    = false;
-
-  // Always measure the real height and apply it
-  function applyPadding() {
-    headerHeight = headerGroup.offsetHeight;
-    if (!isHidden) {
-      page.style.paddingTop = headerHeight + 'px';
-    }
-  }
-
-  function showHeader() {
-    if (!isHidden) return;
-    isHidden = false;
-    headerGroup.classList.remove('header-group--hidden');
-    if (bottomNav) bottomNav.classList.remove('bottom-nav--hidden');
-    page.style.paddingTop = headerHeight + 'px';
-  }
-
-  function hideHeader() {
-    if (isHidden) return;
-    isHidden = true;
-    headerGroup.classList.add('header-group--hidden');
-    if (bottomNav) bottomNav.classList.add('bottom-nav--hidden');
-    page.style.paddingTop = '0px';
-  }
-
-  window.addEventListener('scroll', () => {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(() => {
-      const y = window.scrollY;
-      if (y <= HIDE_AFTER) {
-        showHeader();
-      } else if (y > lastY) {
-        hideHeader();         // scrolling down
-      } else if (lastY - y > SHOW_DELTA) {
-        showHeader();         // scrolling up enough
-      }
-      lastY = y;
-      ticking = false;
-    });
-  }, { passive: true });
-
-  // Use ResizeObserver to always have the correct header height
-  // (handles tag-strip show/hide, font load, etc.)
-  const ro = new ResizeObserver(() => applyPadding());
-  ro.observe(headerGroup);
-
-  // Also set padding immediately after page paint
-  if (document.readyState === 'complete') {
-    applyPadding();
-  } else {
-    window.addEventListener('load', applyPadding);
-  }
-})();
 
 // ── Trending button handler ────────────────────────────────────
 window.goTrending = function() {
@@ -993,6 +922,46 @@ window.goTrending = function() {
   // Scroll to top smoothly
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
+
+
+// ── Header hide/show on scroll ───────────────────────────────
+(function() {
+  var header    = document.getElementById('header-group');
+  var bottomNav = document.querySelector('.bottom-nav');
+  var page      = document.getElementById('page');
+  var lastY     = 0;
+
+  // Set page top-padding to match real header height
+  function setPadding() {
+    page.style.paddingTop = header.offsetHeight + 'px';
+  }
+
+  // Run after everything has painted
+  window.addEventListener('load', setPadding);
+
+  window.addEventListener('scroll', function() {
+    var y = window.scrollY;
+
+    if (y < 10) {
+      // At the very top — always show
+      header.classList.remove('header-group--hidden');
+      bottomNav && bottomNav.classList.remove('bottom-nav--hidden');
+      setPadding();
+    } else if (y > lastY + 4) {
+      // Scrolling DOWN — hide
+      header.classList.add('header-group--hidden');
+      bottomNav && bottomNav.classList.add('bottom-nav--hidden');
+      page.style.paddingTop = '0px';
+    } else if (y < lastY - 4) {
+      // Scrolling UP — show
+      header.classList.remove('header-group--hidden');
+      bottomNav && bottomNav.classList.remove('bottom-nav--hidden');
+      setPadding();
+    }
+
+    lastY = y;
+  }, { passive: true });
+})();
 
 init();
 </script>
